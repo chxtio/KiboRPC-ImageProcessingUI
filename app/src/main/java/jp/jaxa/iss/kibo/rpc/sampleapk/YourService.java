@@ -44,7 +44,7 @@ public class YourService extends KiboRpcService {
 //        api.moveTo(point, quaternion, false);
 
         // Move to point 1 (1st attempt)
-        Point point = new Point(9.815f, -9.806f, 4.293f);
+        Point point = new Point(9.866984f, -6.8525f, 4.945f) //(9.815f, -9.806f, 4.293f);
         Quaternion quaternion = new Quaternion(0f, 0f, 0f, 1f);
         Result result = api.moveTo(point, quaternion, true);
 
