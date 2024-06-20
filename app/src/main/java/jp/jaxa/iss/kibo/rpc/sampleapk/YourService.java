@@ -1,5 +1,8 @@
 package jp.jaxa.iss.kibo.rpc.sampleapk;
 
+import android.util.Log;
+
+import gov.nasa.arc.astrobee.Result;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 
 import gov.nasa.arc.astrobee.types.Point;
@@ -12,18 +15,36 @@ import org.opencv.core.Mat;
  */
 
 public class YourService extends KiboRpcService {
+
+    private final String TAG = this.getClass().getSimpleName();
+
     @Override
     protected void runPlan1(){
         // The mission starts.
         api.startMission();
+        Log.i(TAG, "Start mission");
 
         // Move to a point.
-        Point point = new Point(10.9d, -9.92284d, 5.195d);
-        Quaternion quaternion = new Quaternion(0f, 0f, -0.707f, 0.707f);
-        api.moveTo(point, quaternion, false);
+//        Point point = new Point(10.9d, -9.92284d, 5.195d);
+        Point point = new Point(9.815f, -9.806f, 4.293f);
+//        Quaternion quaternion = new Quaternion(0f, 0f, -0.707f, 0.707f);
+        Quaternion quaternion = new Quaternion(0f, 0f, 0f, 1f);
+//        api.moveTo(point, quaternion, false);
+        Result result = api.moveTo(point, quaternion, true);
+
+        // Check result and loop while moveTo() has not succeeded
+        final int LOOP_MAX = 5;
+        int loopCounter = 0;
+        while(!result.hasSucceeded() && loopCounter < LOOP_MAX) {
+            // Retry
+            result = api.moveTo(point, quaternion, true);
+            ++loopCounter;
+        }
+
 
         // Get a camera image.
         Mat image = api.getMatNavCam();
+        api.saveMatImage(image, "file_name.png");
 
         /* *********************************************************************** */
         /* Write your code to recognize type and number of items in the each area! */
