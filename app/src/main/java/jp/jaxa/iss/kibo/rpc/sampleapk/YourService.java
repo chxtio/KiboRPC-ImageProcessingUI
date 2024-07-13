@@ -55,54 +55,12 @@ public class YourService extends KiboRpcService {
             Log.i(TAG, "No image");
         } else {
             String imageStr = yourMethod();
-            // readAR(image);
+             detectAR(image);
+            Mat undistortImg = correctImageDistortion(image);
+            api.saveMatImage(undistortImg, "image_with_markers.png");
         }
 
-        // Detect AR
-        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
-        List<Mat> corners = new ArrayList<>();
-        Mat markerIds = new Mat();
-        Aruco.detectMarkers(image, dictionary, corners, markerIds); // Detect markers and store the corners and IDs
 
-        // Convert image to RGB color space
-        Imgproc.cvtColor(image, image, Imgproc.COLOR_GRAY2RGB);
-
-        // Draw detected markers on image
-        if (!markerIds.empty()) {
-            Scalar green = new Scalar(0, 255, 0);
-            Scalar red = new Scalar(255, 0, 0);
-            Aruco.drawDetectedMarkers(image, corners); //, markerIds, green);
-
-            // Draw marker ID label
-            if (corners.size() > 0) {
-                Mat firstCorner = corners.get(0);
-                double x = firstCorner.get(0, 0)[0];
-                double y = firstCorner.get(0, 0)[1];
-                org.opencv.core.Point labelPos = new org.opencv.core.Point(x, y - 30); // Offset
-                int markerId = (int) markerIds.get(0, 0)[0];
-                Imgproc.putText(image, "id=" + markerId, labelPos, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, red, 2);
-            }
-
-            Log.i(TAG, "Markers detected: " + markerIds.dump());
-        } else {
-            Log.i(TAG, "No markers detected.");
-        }
-
-        // Correct image distortion
-        // Get camera matrix and populate with camera intrinsics
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
-        cameraMatrix.put(0, 0, api.getNavCamIntrinsics()[0]);
-
-        // Get lens distortion parameters
-        Mat cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
-        cameraCoefficients.put(0, 0, api.getNavCamIntrinsics()[1]);
-        cameraCoefficients.convertTo(cameraCoefficients, CvType.CV_64F);
-
-        // Undistort image
-        Mat undistortImg = new Mat();
-        Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
-
-        api.saveMatImage(undistortImg, "image_with_markers.png");
 
         /*************************************************************************/
         /* Write your code to recognize type and number of items in each area! */
@@ -133,6 +91,56 @@ public class YourService extends KiboRpcService {
         api.takeTargetItemSnapshot();
     }
 
+    // Detect AR and draw markers
+    private void detectAR(Mat image) {
+        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
+        List<Mat> corners = new ArrayList<>();
+        Mat markerIds = new Mat();
+        Aruco.detectMarkers(image, dictionary, corners, markerIds); // Detect markers and store the corners and IDs
+
+        // Convert image to RGB color space
+        Imgproc.cvtColor(image, image, Imgproc.COLOR_GRAY2RGB);
+
+        // Draw detected markers on image
+        if (!markerIds.empty()) {
+            Scalar green = new Scalar(0, 255, 0);
+            Scalar red = new Scalar(255, 0, 0);
+            Aruco.drawDetectedMarkers(image, corners); //, markerIds, green);
+
+            // Draw marker ID label
+            if (corners.size() > 0) {
+                Mat firstCorner = corners.get(0);
+                double x = firstCorner.get(0, 0)[0];
+                double y = firstCorner.get(0, 0)[1];
+                org.opencv.core.Point labelPos = new org.opencv.core.Point(x, y - 30); // Offset
+                int markerId = (int) markerIds.get(0, 0)[0];
+                Imgproc.putText(image, "id=" + markerId, labelPos, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, red, 2);
+            }
+
+            Log.i(TAG, "Markers detected: " + markerIds.dump());
+        } else {
+            Log.i(TAG, "No markers detected.");
+        }
+    }
+
+    // Attempt to straighten image
+    private Mat correctImageDistortion(Mat image) {
+        // Get camera matrix and populate with camera intrinsics
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
+        cameraMatrix.put(0, 0, api.getNavCamIntrinsics()[0]);
+
+        // Get lens distortion parameters
+        Mat cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
+        cameraCoefficients.put(0, 0, api.getNavCamIntrinsics()[1]);
+        cameraCoefficients.convertTo(cameraCoefficients, CvType.CV_64F);
+
+        // Undistort image
+        Mat undistortImg = new Mat();
+        Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
+
+        return undistortImg;
+    }
+
     @Override
     protected void runPlan2() {
         // Write your plan 2 here.
@@ -147,4 +155,6 @@ public class YourService extends KiboRpcService {
     private String yourMethod() {
         return "your method";
     }
+
+
 }
