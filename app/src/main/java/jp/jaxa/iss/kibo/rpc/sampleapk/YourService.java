@@ -95,12 +95,12 @@ public class YourService extends KiboRpcService {
         String imageStr = yourMethod();
         detectAR(image);
         api.saveMatImage(image, "image_detected_markers.png");
-        Mat undistortImg = correctImageDistortion(image);
-        api.saveMatImage(undistortImg, "undistort_image_detected_markers.png");
+//        Mat undistortImg = correctImageDistortion(image);
+//        api.saveMatImage(undistortImg, "undistort_image_detected_markers.png");
 
         // Pattern matching
         Mat[] templates = loadTemplateImages(imageFileNames);
-        int[] templateMatchCnt = getNumTemplateMatch(templates, undistortImg);
+        int[] templateMatchCnt = getNumTemplateMatch(templates, image);
 
         // Handle template match counts
         for (int i = 0; i < templateMatchCnt.length; i++) {
@@ -213,6 +213,7 @@ public class YourService extends KiboRpcService {
         for (int i = 0; i < imageFileNames.length; i++) {
             try {
                 // Open template image file in Bitmap from the filename and convert to Mat
+                Log.e(TAG, "Loading template: " + imageFileNames[i]);
                 InputStream inputStream = assetManager.open(imageFileNames[i]);
                 Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
                 Mat mat = new Mat();
@@ -272,15 +273,14 @@ public class YourService extends KiboRpcService {
                             for (int x = 0; x < thresholdedResult.cols(); x++) {
                                 if (thresholdedResult.get(y, x)[0] > 0) {
                                     matches.add(new org.opencv.core.Point(x,y));
-                                    matchCnt++;
+//                                    matchCnt++;
                                 }
                             }
                         }
                     }
                 }
             }
-//            // Store the number of matches for this template
-//            templateMatchCnt[tempNum] = matchCnt;
+
             // Avoid detecting the same location multiple times
             List<org.opencv.core.Point> filteredMatches = removeDuplicates(matches);
             matchCnt += filteredMatches.size();
@@ -291,25 +291,6 @@ public class YourService extends KiboRpcService {
         }
 
         return templateMatchCnt;
-    }
-
-    // Resize image
-    private Mat resizeImg(Mat img, int width){
-        int height = (int) (img.rows() * ((double) width / img.cols()));
-        Mat resizedImg = new Mat();
-        Imgproc.resize(img, resizedImg, new Size(width, height));
-
-        return resizedImg;
-    }
-
-    // Rotate image
-    private Mat rotImage(Mat img, int angle) {
-        org.opencv.core.Point center = new org.opencv.core.Point(img.cols() / 2.0, img.rows() / 2.0);
-        Mat rotatedMat = Imgproc.getRotationMatrix2D(center, angle, 1.0);
-        Mat rotatedImg = new Mat();
-        Imgproc.warpAffine(img, rotatedImg, rotatedMat, img.size());
-
-        return rotatedImg;
     }
 
     // Remove multiple detections
@@ -333,6 +314,25 @@ public class YourService extends KiboRpcService {
             }
         }
         return filteredList;
+    }
+
+    // Resize image
+    private Mat resizeImg(Mat img, int width){
+        int height = (int) (img.rows() * ((double) width / img.cols()));
+        Mat resizedImg = new Mat();
+        Imgproc.resize(img, resizedImg, new Size(width, height));
+
+        return resizedImg;
+    }
+
+    // Rotate image
+    private Mat rotImage(Mat img, int angle) {
+        org.opencv.core.Point center = new org.opencv.core.Point(img.cols() / 2.0, img.rows() / 2.0);
+        Mat rotatedMat = Imgproc.getRotationMatrix2D(center, angle, 1.0);
+        Mat rotatedImg = new Mat();
+        Imgproc.warpAffine(img, rotatedImg, rotatedMat, img.size());
+
+        return rotatedImg;
     }
 
     // Find the distance between two points
