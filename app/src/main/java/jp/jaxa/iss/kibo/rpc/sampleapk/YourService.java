@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.io.OptionalDataException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import gov.nasa.arc.astrobee.types.Point;
@@ -60,6 +61,7 @@ public class YourService extends KiboRpcService {
         // Retrieve image file names from assets
         try {
             imageFileNames = assetManager.list("");
+            Log.e(TAG, "Loaded image filenames: " + Arrays.toString(imageFileNames));
         } catch (Exception e) {
             imageFileNames = new String[0];
             Log.e(TAG, "Error loading image filenames from assets", e);
@@ -136,6 +138,22 @@ public class YourService extends KiboRpcService {
         api.takeTargetItemSnapshot();
     }
 
+
+    @Override
+    protected void runPlan2() {
+        // Write your plan 2 here.
+    }
+
+    @Override
+    protected void runPlan3() {
+        // Write your plan 3 here.
+    }
+
+    // You can add your method.
+    private String yourMethod() {
+        return "your method";
+    }
+
     // Detect AR and draw markers
     private void detectAR(Mat image) {
         Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
@@ -162,6 +180,9 @@ public class YourService extends KiboRpcService {
                 Imgproc.putText(image, "id=" + markerId, labelPos, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, red, 2);
             }
 
+//            // Convert back to gray
+//            Imgproc.cvtColor(image, image, Imgproc.COLOR_RGB2BGR);
+
             Log.i(TAG, "Markers detected: " + markerIds.dump());
         } else {
             Log.i(TAG, "No markers detected.");
@@ -186,21 +207,6 @@ public class YourService extends KiboRpcService {
         return undistortImg;
     }
 
-    @Override
-    protected void runPlan2() {
-        // Write your plan 2 here.
-    }
-
-    @Override
-    protected void runPlan3() {
-        // Write your plan 3 here.
-    }
-
-    // You can add your method.
-    private String yourMethod() {
-        return "your method";
-    }
-
     // Load template images
     private Mat[] loadTemplateImages(String[] imageFileNames){
         Mat[] templates = new Mat[imageFileNames.length];
@@ -213,7 +219,8 @@ public class YourService extends KiboRpcService {
                 Utils.bitmapToMat(bitmap, mat);
 
                 // Convert to grayscale
-                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BayerBG2GRAY);
+//                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BayerBG2GRAY);
+                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY);
                 templates[i] = mat; // Assign to array of templates
                 inputStream.close();
 
