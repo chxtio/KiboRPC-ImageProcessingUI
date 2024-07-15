@@ -62,9 +62,10 @@ public class YourService extends KiboRpcService {
         try {
             imageFileNames = assetManager.list("");
             Log.e(TAG, "Loaded image filenames: " + Arrays.toString(imageFileNames));
-        } catch (Exception e) {
-            imageFileNames = new String[0];
-            Log.e(TAG, "Error loading image filenames from assets", e);
+        } catch (IOException e) {
+//            imageFileNames = new String[0];
+//            Log.e(TAG, "Error loading image filenames from assets", e);
+            e.printStackTrace();
         }
 
         // Move to point1 (1st attempt)
@@ -180,8 +181,16 @@ public class YourService extends KiboRpcService {
                 Imgproc.putText(image, "id=" + markerId, labelPos, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, red, 2);
             }
 
-//            // Convert back to gray
-//            Imgproc.cvtColor(image, image, Imgproc.COLOR_RGB2BGR);
+            // Log details about the image after converting to RGB
+            Log.i(TAG, "Image Mat size after converting to RGB: " + image.size());
+            Log.i(TAG, "Image Mat type after converting to RGB: " + image.type() + " (" + CvType.typeToString(image.type()) + ")");
+            Log.i(TAG, "Image Mat channels after converting to RGB: " + image.channels());
+            // Convert back to gray
+            Imgproc.cvtColor(image, image, Imgproc.COLOR_RGB2GRAY);
+            // Log details about the image after converting back to grayscale
+            Log.i(TAG, "Image Mat size after converting back to grayscale: " + image.size());
+            Log.i(TAG, "Image Mat type after converting back to grayscale: " + image.type() + " (" + CvType.typeToString(image.type()) + ")");
+            Log.i(TAG, "Image Mat channels after converting back to grayscale: " + image.channels());
 
             Log.i(TAG, "Markers detected: " + markerIds.dump());
         } else {
@@ -211,6 +220,9 @@ public class YourService extends KiboRpcService {
     private Mat[] loadTemplateImages(String[] imageFileNames){
         Mat[] templates = new Mat[imageFileNames.length];
         for (int i = 0; i < imageFileNames.length; i++) {
+            if(!imageFileNames[i].endsWith(".png")){
+                continue;
+            }
             try {
                 // Open template image file in Bitmap from the filename and convert to Mat
                 Log.e(TAG, "Loading template: " + imageFileNames[i]);
@@ -219,9 +231,25 @@ public class YourService extends KiboRpcService {
                 Mat mat = new Mat();
                 Utils.bitmapToMat(bitmap, mat);
 
-                // Convert to grayscale
-//                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BayerBG2GRAY);
+                // After loading the bitmap
+                Log.i(TAG, "Bitmap dimensions: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+                Log.i(TAG, "Bitmap config: " + bitmap.getConfig());
+
+                // After converting bitmap to Mat
+                Utils.bitmapToMat(bitmap, mat);
+                Log.i(TAG, "Mat size after conversion: " + mat.size());
+                Log.i(TAG, "Mat type after conversion: " + mat.type() + " (" + CvType.typeToString(mat.type()) + ")");
+                Log.i(TAG, "Mat channels after conversion: " + mat.channels());
+
+                // After converting to grayscale
                 Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY);
+                Log.i(TAG, "Mat size after grayscale conversion: " + mat.size());
+                Log.i(TAG, "Mat type after grayscale conversion: " + mat.type() + " (" + CvType.typeToString(mat.type()) + ")");
+                Log.i(TAG, "Mat channels after grayscale conversion: " + mat.channels());
+
+
+                // Convert to grayscale
+//                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY);
                 templates[i] = mat; // Assign to array of templates
                 inputStream.close();
 
@@ -235,15 +263,51 @@ public class YourService extends KiboRpcService {
 
     private int[] getNumTemplateMatch(Mat[] templates, Mat img){
         // Get the number of template matches
-        int templateMatchCnt[] = new int[10];
+//        int templateMatchCnt[] = new int[10];
+        int templateMatchCnt[] = new int[templates.length];
         for (int tempNum = 0; tempNum < templates.length; tempNum++) {
+            Log.e(TAG, "tempNum: " + tempNum);
+            if (templates[tempNum] == null || templates[tempNum].empty()) {
+                Log.e(TAG, "Template is null or empty at index: " + tempNum);
+                continue; // Skip to the next template
+            }
+
             // Number of matches
             int matchCnt = 0;
             // Coordinates of the matched location
             List<org.opencv.core.Point> matches = new ArrayList<>();
 
+            // Check if image or template is null
+//            Log.e(TAG, "img test");
+//            if (img.empty()) {
+//                Log.e(TAG, "img is empty");
+//            }
+            Log.e(TAG, "template test");
+            if(templates[tempNum].empty()){
+                Log.e(TAG, "template is empty");
+            }
+
             Mat template = templates[tempNum].clone();
             Mat targetImg = img.clone();
+
+            // Todo: fix error: (-215) (depth == CV_8U || depth == CV_32F) && type == _templ.type()
+            //  && _img.dims() <= 2 in function cv::matchTemplate
+            // Check if template and image are in compatible format
+            // Check depth
+            Log.i(TAG, "Saving template: ");
+            api.saveMatImage(template, "template-test");
+
+            Log.i(TAG, "Template size: " + template.size());
+            Log.i(TAG, "Template type: " + template.type() + " (" + CvType.typeToString(template.type()) + ")");
+            Log.i(TAG, "Template channels (dims): " + template.dims());
+            Log.i(TAG, "Template channels: " + template.channels());
+
+            Log.i(TAG, "Image size: " +targetImg.size());
+            Log.i(TAG, "Image type: " + targetImg.type() + " (" + CvType.typeToString(img.type()) + ")");
+            Log.i(TAG, "Image channels (dims): " + targetImg.dims());
+            Log.i(TAG, "Image channels: " + targetImg.channels());
+
+
 
             // Pattern matching
             int widthMin = 20; //[px]
