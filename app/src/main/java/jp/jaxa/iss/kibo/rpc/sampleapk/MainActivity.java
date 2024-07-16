@@ -10,12 +10,16 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.opencv.android.OpenCVLoader;
@@ -40,42 +44,79 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private TemplateAdapter templateAdapter;
 
+    private ImageView imageView;
+    private SeekBar seekBar;
+    private Button buttonProcess;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        setTitle("SampleAPK");
-
-        // Initialize OpenCV
         if (!OpenCVLoader.initDebug()) {
             Log.e(TAG, "OpenCV initialization failed.");
         } else {
             Log.d(TAG, "OpenCV initialization succeeded.");
         }
+        // Initialize views
+        recyclerView = findViewById(R.id.recyclerView);
+        imageView = findViewById(R.id.imageView);
+//        seekBar = findViewById(R.id.seekBar);
+        buttonProcess = findViewById(R.id.buttonProcess);
 
-        // Initialize RecyclerView
-        recyclerView = findViewById(R.id.templatesRecyclerView);
-        recyclerView.setLayoutManager(new GridLayoutManager(this, 3)); // 3 columns
-
-        // Load images and templates
-        loadImages(); // Ensure this method populates imageFileNames
+        // Load templates and image filenames (replace with your actual methods)
+        loadImages();
         mainImage = new Mat();
         loadMainImage();
         Mat[] templateMats = loadTemplateImages(imageFileNames);
         templates.addAll(Arrays.asList(templateMats));
 
+        // Setup RecyclerView
+//        recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+
+        // Setup RecyclerView with GridLayoutManager (3 columns)
+        GridLayoutManager layoutManager = new GridLayoutManager(this, 3);
+        recyclerView.setLayoutManager(layoutManager);
         templateAdapter = new TemplateAdapter(templates, imageFileNames);
         recyclerView.setAdapter(templateAdapter);
 
-        // Start template matching process in the background
-        new TemplateMatchingTask().execute();
+
+        // Button click listener
+        buttonProcess.setOnClickListener(v -> processImage());
+
+//        // SeekBar change listener
+//        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+//            @Override
+//            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+//                // Adjust processing parameters based on seekBar value
+//            }
+//
+//            @Override
+//            public void onStartTrackingTouch(SeekBar seekBar) {
+//            }
+//
+//            @Override
+//            public void onStopTrackingTouch(SeekBar seekBar) {
+//                processImage();
+//            }
+//        });
+    }
+
+    private void processImage() {
+        // Implement image processing logic here
+        // Update imageView and RecyclerView based on processing results
+        // Execute the AsyncTask for template matching
+        TemplateMatchingTask templateMatchingTask = new TemplateMatchingTask();
+        templateMatchingTask.execute();
     }
 
     private class TemplateMatchingTask extends AsyncTask<Void, Integer, Integer> {
 
         @Override
         protected Integer doInBackground(Void... voids) {
+            runOnUiThread(() -> {
             setTitle("Template Matching...");
+            });
+
             Mat[] templatesArray = templates.toArray(new Mat[0]);
             int[] templateMatchCnt = new int[templatesArray.length];
             Mat result = new Mat();
@@ -152,11 +193,14 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Integer bestMatchIndex) {
             // Update UI with best match information
-
             String bestMatchFilename = imageFileNames.get(bestMatchIndex);
             String bestMatch = bestMatchFilename.substring(0, bestMatchFilename.length() - 4);
-            setTitle("Best Match: " + bestMatch);
-            Log.i(TAG, "Best match: " + bestMatch);
+
+            // Set title on the main thread
+            runOnUiThread(() -> {
+                setTitle("Best Match: " + bestMatch);
+                Log.i(TAG, "Best match: " + bestMatch);
+            });
 
             // Highlight the best match in the adapter
             templateAdapter.setBestMatchIndex(bestMatchIndex);
@@ -167,27 +211,24 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void loadMainImage() {
-        // Load image from assets
         AssetManager assetManager = getAssets();
         try {
+            Log.e(TAG, "Loading mainImage: " + "image_detected_markers.png");
             InputStream inputStream = assetManager.open("images/image_detected_markers.png");
             Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-            Log.e(TAG, "Loading mainImage: " + "image_detected_markers.png");
-
             // Convert bitmap to Mat
             Utils.bitmapToMat(bitmap, mainImage);
-
             // Convert to grayscale
             Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGB2GRAY);
-
             inputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    // Retrieve template image filenames from assets
     private void loadImages() {
-        // Retrieve image filenames from assets
+
         try {
             String[] assetFileNames = getAssets().list("images");
             imageFileNames = new ArrayList<>(Arrays.asList(assetFileNames));
@@ -261,47 +302,28 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
+        @NonNull
         @Override
-        public TemplateViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        public TemplateViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_template_image, parent, false);
             return new TemplateViewHolder(view);
         }
 
         @Override
-        public void onBindViewHolder(TemplateViewHolder holder, int position) {
-            if (position < templates.size()) {
-                Mat mat = templates.get(position);
+        public void onBindViewHolder(@NonNull TemplateViewHolder holder, int position) {
+            Mat mat = templates.get(position);
+            Bitmap bitmap = Bitmap.createBitmap(mat.cols(), mat.rows(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(mat, bitmap);
+            holder.imageView.setImageBitmap(bitmap);
+            holder.textViewLabel.setText(imageFileNames.get(position));
 
-                // Convert Mat to Bitmap for display
-                Bitmap bitmap = Bitmap.createBitmap(mat.cols(), mat.rows(), Bitmap.Config.ARGB_8888);
-                Utils.matToBitmap(mat, bitmap);
-
-                // Set bitmap to ImageView
-                holder.imageView.setImageBitmap(bitmap);
-
-                // Set label text (using filename)
-                if (position < imageFileNames.size()) {
-                    String fileName = imageFileNames.get(position);
-                    holder.textViewLabel.setText(fileName);
-
-                    // Highlight the current template
-//                    Log.e(TAG, "position: " + position + " bestMatchIndex: " + bestMatchIndex + " same? " + (position == bestMatchIndex));
-                    if (position == currentTemplateIndex) {
-                        holder.itemView.setBackgroundColor(ContextCompat.getColor(holder.itemView.getContext(),
-                                R.color.highlight_color));
-//                        holder.itemView.setBackgroundColor(Color.TRANSPARENT);
-//                        holder.itemView.setBackgroundColor(customHighlightColor);
-                    } else if (position == bestMatchIndex) {
-//                        holder.itemView.setBackgroundColor(customHighlightColor);
-                        holder.itemView.setBackgroundColor(Color.RED);
-                    } else {
-                        holder.itemView.setBackgroundColor(Color.TRANSPARENT);
-                    }
-                } else {
-                    Log.e(TAG, "Invalid position for imageFileNames: " + position + ", Size: " + imageFileNames.size());
-                }
+            // Optionally highlight the best match or current template
+            if (position == bestMatchIndex) {
+                holder.itemView.setBackgroundColor(customHighlightColor);
+            } else if (position == currentTemplateIndex){
+                holder.itemView.setBackgroundColor(Color.YELLOW);
             } else {
-                Log.e(TAG, "Invalid position for templates: " + position + ", Size: " + templates.size());
+                holder.itemView.setBackgroundColor(Color.TRANSPARENT);
             }
         }
 
@@ -321,6 +343,18 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+//        class TemplateViewHolder extends RecyclerView.ViewHolder {
+//            ImageView imageView;
+//            TextView textViewLabel;
+//
+//            TemplateViewHolder(View itemView) {
+//                super(itemView);
+//                imageView = itemView.findViewById(R.id.imageViewTemplate);
+//                textViewLabel = itemView.findViewById(R.id.textViewLabel);
+//            }
+//        }
+//    }
+
 
     // Remove multiple detections
     public static List<org.opencv.core.Point> removeDuplicates(List<org.opencv.core.Point> points) {
