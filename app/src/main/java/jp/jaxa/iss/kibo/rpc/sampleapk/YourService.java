@@ -35,17 +35,6 @@ import org.opencv.imgproc.Imgproc;
 public class YourService extends KiboRpcService {
 
     private final String TAG = this.getClass().getSimpleName();
-//    private static String[] TEMPLATE_FILE_NAMES;
-//
-//    static {
-//        try {
-//            TEMPLATE_FILE_NAMES = loadTemplateFileNames();
-//        } catch (Exception e) {
-//            TEMPLATE_FILE_NAMES = new String[0];
-//            Log.e("YourService", "Error loading template file names", e);
-//        }
-//    }
-
     // Image Assets File Information
     private AssetManager assetManager;
     private String[] imageFileNames;
@@ -55,18 +44,6 @@ public class YourService extends KiboRpcService {
         // The mission starts: Undocks Astrobee from docking station, starts timer, returns Success/Failure
         api.startMission();
         Log.i(TAG, "Start mission");
-
-        // Initialize AssetManager
-        assetManager = getAssets();
-        // Retrieve image file names from assets
-        try {
-            imageFileNames = assetManager.list("");
-            Log.e(TAG, "Loaded image filenames: " + Arrays.toString(imageFileNames));
-        } catch (IOException e) {
-//            imageFileNames = new String[0];
-//            Log.e(TAG, "Error loading image filenames from assets", e);
-            e.printStackTrace();
-        }
 
         // Move to point1 (1st attempt)
         Point point = new Point(11d, -9.88d, 5.195d);
@@ -94,10 +71,14 @@ public class YourService extends KiboRpcService {
         }
 
         String imageStr = yourMethod();
-        detectAR(image);
-        api.saveMatImage(image, "image_detected_markers.png");
+        api.saveMatImage(image, "image.png");
+//        detectAR(image);
+//        api.saveMatImage(image, "image_detected_markers.png");
 //        Mat undistortImg = correctImageDistortion(image);
 //        api.saveMatImage(undistortImg, "undistort_image_detected_markers.png");
+
+        loadImages();
+
 
         // Pattern matching
         Mat[] templates = loadTemplateImages(imageFileNames);
@@ -139,7 +120,6 @@ public class YourService extends KiboRpcService {
         api.takeTargetItemSnapshot();
     }
 
-
     @Override
     protected void runPlan2() {
         // Write your plan 2 here.
@@ -153,6 +133,24 @@ public class YourService extends KiboRpcService {
     // You can add your method.
     private String yourMethod() {
         return "your method";
+    }
+
+    // Attempt to straighten image
+    private Mat correctImageDistortion(Mat image) {
+        // Get camera matrix and populate with camera intrinsics
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
+        cameraMatrix.put(0, 0, api.getNavCamIntrinsics()[0]);
+
+        // Get lens distortion parameters
+        Mat cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
+        cameraCoefficients.put(0, 0, api.getNavCamIntrinsics()[1]);
+        cameraCoefficients.convertTo(cameraCoefficients, CvType.CV_64F);
+
+        // Undistort image
+        Mat undistortImg = new Mat();
+        Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
+
+        return undistortImg;
     }
 
     // Detect AR and draw markers
@@ -198,59 +196,54 @@ public class YourService extends KiboRpcService {
         }
     }
 
-    // Attempt to straighten image
-    private Mat correctImageDistortion(Mat image) {
-        // Get camera matrix and populate with camera intrinsics
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
-        cameraMatrix.put(0, 0, api.getNavCamIntrinsics()[0]);
 
-        // Get lens distortion parameters
-        Mat cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
-        cameraCoefficients.put(0, 0, api.getNavCamIntrinsics()[1]);
-        cameraCoefficients.convertTo(cameraCoefficients, CvType.CV_64F);
 
-        // Undistort image
-        Mat undistortImg = new Mat();
-        Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
-
-        return undistortImg;
+    private void loadImages() {
+        // Initialize AssetManager
+//        assetManager = getAssets();
+        // Retrieve image file names from assets
+        try {
+            String[] assetFileNames = getAssets().list("images"); //C:\Users\bumpu\OneDrive\Robotics\kiborpc-2024\app\src\main\assets
+            List<String> imageFileNames = new ArrayList<>(Arrays.asList(assetFileNames));
+            Log.e(TAG, "Loaded image filenames: " + imageFileNames); //+ Arrays.toString(imageFileNames));
+        } catch (IOException e) {
+            imageFileNames = new String[0]; // Initialize empty array in case of exception
+            Log.e(TAG, "Error loading image filenames from assets", e);
+            e.printStackTrace();
+        }
     }
 
     // Load template images
-    private Mat[] loadTemplateImages(String[] imageFileNames){
+    public Mat[] loadTemplateImages(String[] imageFileNames){
         Mat[] templates = new Mat[imageFileNames.length];
         for (int i = 0; i < imageFileNames.length; i++) {
             if(!imageFileNames[i].endsWith(".png")){
                 continue;
             }
             try {
-                // Open template image file in Bitmap from the filename and convert to Mat
-                Log.e(TAG, "Loading template: " + imageFileNames[i]);
-                InputStream inputStream = assetManager.open(imageFileNames[i]);
-                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                Mat mat = new Mat();
-                Utils.bitmapToMat(bitmap, mat);
+                    // Open template image file in Bitmap from the filename and convert to Mat
+                    Log.e(TAG, "Loading template: " + imageFileNames[i]);
 
-                // After loading the bitmap
-                Log.i(TAG, "Bitmap dimensions: " + bitmap.getWidth() + "x" + bitmap.getHeight());
-                Log.i(TAG, "Bitmap config: " + bitmap.getConfig());
+                    // Load image from asset into bitmap
+                    InputStream inputStream = assetManager.open("images/" + imageFileNames[i]); // input stream holding the raw data
+                    Bitmap bitmap = BitmapFactory.decodeStream(inputStream); // decode input stream into bitmap
+//                Log.i(TAG, "Bitmap dimensions: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+//                Log.i(TAG, "Bitmap config: " + bitmap.getConfig());
 
-                // After converting bitmap to Mat
-                Utils.bitmapToMat(bitmap, mat);
-                Log.i(TAG, "Mat size after conversion: " + mat.size());
-                Log.i(TAG, "Mat type after conversion: " + mat.type() + " (" + CvType.typeToString(mat.type()) + ")");
-                Log.i(TAG, "Mat channels after conversion: " + mat.channels());
-
-                // After converting to grayscale
-                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY);
-                Log.i(TAG, "Mat size after grayscale conversion: " + mat.size());
-                Log.i(TAG, "Mat type after grayscale conversion: " + mat.type() + " (" + CvType.typeToString(mat.type()) + ")");
-                Log.i(TAG, "Mat channels after grayscale conversion: " + mat.channels());
-
+                    // Convert bitmap to Mat
+                    Mat mat = new Mat();
+                    Utils.bitmapToMat(bitmap, mat);
+//                Log.i(TAG, "Mat size after conversion: " + mat.size());
+//                Log.i(TAG, "Mat type after conversion: " + mat.type() + " (" + CvType.typeToString(mat.type()) + ")");
+//                Log.i(TAG, "Mat channels after conversion: " + mat.channels());
 
                 // Convert to grayscale
-//                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY);
-                templates[i] = mat; // Assign to array of templates
+                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY);
+//                Log.i(TAG, "Mat size after grayscale conversion: " + mat.size());
+//                Log.i(TAG, "Mat type after grayscale conversion: " + mat.type() + " (" + CvType.typeToString(mat.type()) + ")");
+//                Log.i(TAG, "Mat channels after grayscale conversion: " + mat.channels());
+
+                templates[i] = mat; // Assign template image to array
                 inputStream.close();
 
             } catch (IOException e) {
@@ -265,6 +258,7 @@ public class YourService extends KiboRpcService {
         // Get the number of template matches
 //        int templateMatchCnt[] = new int[10];
         int templateMatchCnt[] = new int[templates.length];
+        Mat result = new Mat();
         for (int tempNum = 0; tempNum < templates.length; tempNum++) {
             Log.e(TAG, "tempNum: " + tempNum);
             if (templates[tempNum] == null || templates[tempNum].empty()) {
@@ -320,17 +314,17 @@ public class YourService extends KiboRpcService {
                     Mat resizedTemp = resizeImg(template, i);
                     Mat rotResizedTemp = rotImage(resizedTemp, j);
 
-                    Mat result = new Mat();
-                    Imgproc.matchTemplate(targetImg, rotResizedTemp, result, Imgproc.TM_CCOEFF_NORMED);
+//                    Mat result = new Mat();
+                            Imgproc.matchTemplate(targetImg, rotResizedTemp, result, Imgproc.TM_SQDIFF);
 
-                    // Get coordinates with similarity greater than or equal to the threshold
-                    double threshold = 0.8;
-                    Core.MinMaxLocResult mmlr = Core.minMaxLoc(result);
-                    double maxVal = mmlr.maxVal;
-                    if (maxVal >= threshold) {
-                        // Extract only results greater than or equal to the threshold
-                        Mat thresholdedResult = new Mat();
-                        Imgproc.threshold(result, thresholdedResult, threshold, 1.0, Imgproc.THRESH_TOZERO);
+                            // Get coordinates with similarity greater than or equal to the threshold
+                            double threshold = 0.8;
+                            Core.MinMaxLocResult mmlr = Core.minMaxLoc(result);
+                            double maxVal = mmlr.maxVal;
+                            if (maxVal >= threshold) {
+                                // Extract only results greater than or equal to the threshold
+                                Mat thresholdedResult = new Mat();
+                                Imgproc.threshold(result, thresholdedResult, threshold, 1.0, Imgproc.THRESH_TOZERO);
 
                         // Get match counts
                         for (int y = 0; y < thresholdedResult.rows(); y++) {
@@ -341,7 +335,10 @@ public class YourService extends KiboRpcService {
                                 }
                             }
                         }
+                        thresholdedResult.release();
                     }
+                            resizedTemp.release();
+                            rotResizedTemp.release();
                 }
             }
 
@@ -352,8 +349,12 @@ public class YourService extends KiboRpcService {
             // Number of matches for each template
             templateMatchCnt[tempNum] = matchCnt;
 
+            template.release();
+            targetImg.release();
+
         }
 
+        result.release();
         return templateMatchCnt;
     }
 
