@@ -13,8 +13,6 @@
         android:adjustViewBounds="true"
         android:src="@drawable/ok" />
 
-    <!-- Uncomment below TextView if you want to display labels -->
-
     <TextView
         android:id="@+id/textViewLabel"
         android:layout_width="wrap_content"
