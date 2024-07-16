@@ -254,7 +254,7 @@ public class YourService extends KiboRpcService {
         return templates;
     }
 
-    private int[] getNumTemplateMatch(Mat[] templates, Mat img){
+    public int[] getNumTemplateMatch(Mat[] templates, Mat img){
         // Get the number of template matches
 //        int templateMatchCnt[] = new int[10];
         int templateMatchCnt[] = new int[templates.length];
@@ -359,7 +359,7 @@ public class YourService extends KiboRpcService {
     }
 
     // Remove multiple detections
-    private static List<org.opencv.core.Point> removeDuplicates (List<org.opencv.core.Point> points) {
+    public static List<org.opencv.core.Point> removeDuplicates (List<org.opencv.core.Point> points) {
         double length = 10; //Width 10px
         List<org.opencv.core.Point> filteredList = new ArrayList<>();
 
@@ -382,7 +382,7 @@ public class YourService extends KiboRpcService {
     }
 
     // Resize image
-    private Mat resizeImg(Mat img, int width){
+    public Mat resizeImg(Mat img, int width){
         int height = (int) (img.rows() * ((double) width / img.cols()));
         Mat resizedImg = new Mat();
         Imgproc.resize(img, resizedImg, new Size(width, height));
@@ -391,7 +391,7 @@ public class YourService extends KiboRpcService {
     }
 
     // Rotate image
-    private Mat rotImage(Mat img, int angle) {
+    public Mat rotImage(Mat img, int angle) {
         org.opencv.core.Point center = new org.opencv.core.Point(img.cols() / 2.0, img.rows() / 2.0);
         Mat rotatedMat = Imgproc.getRotationMatrix2D(center, angle, 1.0);
         Mat rotatedImg = new Mat();
@@ -401,7 +401,7 @@ public class YourService extends KiboRpcService {
     }
 
     // Find the distance between two points
-    private static double calculateDistance(org.opencv.core.Point p1, org.opencv.core.Point p2){
+    public static double calculateDistance(org.opencv.core.Point p1, org.opencv.core.Point p2){
         double dx = p1.x - p2.x;
         double dy = p1.y - p2.y;
 
@@ -409,7 +409,7 @@ public class YourService extends KiboRpcService {
     }
 
     // Get max value of an array
-    private int getMaxIndex(int[] array) {
+    public int getMaxIndex(int[] array) {
         int max = 0;
         int maxIndex = 0;
 
@@ -423,6 +423,4 @@ public class YourService extends KiboRpcService {
 
         return maxIndex;
     }
-
-
 }
