@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center">
+
+    <ImageView
+        android:id="@+id/imageViewTemplate"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:scaleType="fitCenter"
+        android:adjustViewBounds="true"
+        android:src="@drawable/ok" />
+
+    <!-- Uncomment below TextView if you want to display labels -->
+
+    <TextView
+        android:id="@+id/textViewLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Label"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:paddingTop="8dp"
+        android:gravity="center" />
+
+
+</LinearLayout>
