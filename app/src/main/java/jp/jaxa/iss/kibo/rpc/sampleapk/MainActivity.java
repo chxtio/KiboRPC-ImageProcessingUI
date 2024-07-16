@@ -30,6 +30,8 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
     private List<String> imageFileNames;
+    private List<String> mainImageFileNames;
+    private Mat mainImage;
     private List<Mat> templates = new ArrayList<>();
     private RecyclerView recyclerView;
     private TemplateAdapter templateAdapter;
@@ -53,7 +55,10 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new GridLayoutManager(this, 3)); // 3 columns
 //        templateAdapter = new TemplateAdapter(templates); // Pass templates list
         // Load images and templates
+
         loadImages(); // Ensure this method populates imageFileNames
+        mainImage = new Mat();
+        loadMainImage();
         Mat[] templateMats = loadTemplateImages(imageFileNames);
         templates.addAll(Arrays.asList(templateMats));
 
@@ -61,6 +66,29 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(templateAdapter);
 
         run();
+    }
+
+    private void loadMainImage() {
+        // Load image from assets
+        AssetManager assetManager = getAssets();
+        try {
+            // Replace "image_detected_markers.png" with your actual file name
+            InputStream inputStream = assetManager.open("images/image_detected_markers.png");
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+            Log.e(TAG, "Loading mainImage: " + "image_detected_markers.png");
+
+            // Convert bitmap to Mat
+//            Mat mat = new Mat();
+            Utils.bitmapToMat(bitmap, mainImage);
+
+            // Convert to grayscale
+            Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGB2GRAY);
+
+//            templates[i] = mat; // Assign template image to array
+            inputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void run() {
@@ -77,11 +105,12 @@ public class MainActivity extends AppCompatActivity {
         try {
             String[] assetFileNames = getAssets().list("images");
             imageFileNames = new ArrayList<>(Arrays.asList(assetFileNames));
-
             // Remove specific files
-            imageFileNames.removeAll(Arrays.asList("android-logo-mask.png", "android-logo-shine.png", "clock64.png", "clock_font.png"));
-
+            imageFileNames.removeAll(Arrays.asList("android-logo-mask.png", "android-logo-shine.png", "clock64.png", "clock_font.png", "image_detected_markers.png"));
             Log.e(TAG, "Loaded " + imageFileNames.size() + " image filenames: " + imageFileNames);
+
+            // Load image with marker
+//            mainImageFileNames = new ArrayList<>(Arrays.asList(assetFileNames));
         } catch (IOException e) {
             Log.e(TAG, "Error loading image filenames from assets", e);
             e.printStackTrace();
