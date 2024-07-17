@@ -38,16 +38,18 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp" />
 
-    <!-- ImageView for displaying the main image -->
+    <!--ImageViewfordisplayingthemainimage-->
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_above="@id/buttonDisplayMainImage"
         android:layout_marginBottom="16dp"
         android:adjustViewBounds="true"
-        android:scaleType="fitCenter"
-        android:visibility="gone" />
+        android:scaleType="centerCrop"
+        android:cropToPadding="true"
+        android:visibility="gone"/>
+
 
     <!-- RecyclerView for displaying template images -->
     <androidx.recyclerview.widget.RecyclerView

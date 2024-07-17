@@ -5,11 +5,13 @@ import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -111,7 +113,7 @@ public class MainActivity extends AppCompatActivity {
         templateAdapter = new TemplateAdapter(templates, imageFileNames);
         recyclerView.setAdapter(templateAdapter);
 
-//        displayMainImage(); // NavCam sample image
+        displayMainImage(); // NavCam sample image
 
         // Button click listener for viewing pose estimation
         buttonDetectAR.setOnClickListener(v -> {
@@ -132,7 +134,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Button click listener for displaying main image
         buttonDisplayMainImage.setOnClickListener(v -> displayMainImage());
+
     }
+
 
     private void displayMainImage() {
         Bitmap bitmap = Bitmap.createBitmap(mainImage.cols(), mainImage.rows(), Bitmap.Config.ARGB_8888);
