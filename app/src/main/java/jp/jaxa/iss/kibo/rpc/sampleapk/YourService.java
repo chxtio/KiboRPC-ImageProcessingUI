@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Log;
 import gov.nasa.arc.astrobee.Result;
+import jp.jaxa.iss.kibo.rpc.api.KiboRpcApi;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 
 import java.io.IOException;
@@ -38,6 +39,12 @@ public class YourService extends KiboRpcService {
     // Image Assets File Information
     private AssetManager assetManager;
     private String[] imageFileNames;
+
+    public void setApi(KiboRpcApi api) {
+        this.api = api;
+    }
+
+
 
     @Override
     protected void runPlan1() {
@@ -136,7 +143,8 @@ public class YourService extends KiboRpcService {
     }
 
     // Attempt to straighten image
-    private Mat correctImageDistortion(Mat image) {
+    public Mat correctImageDistortion(Mat image) {
+        Log.e(TAG, "Undistort image");
         // Get camera matrix and populate with camera intrinsics
         Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
         cameraMatrix.put(0, 0, api.getNavCamIntrinsics()[0]);
@@ -145,6 +153,8 @@ public class YourService extends KiboRpcService {
         Mat cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
         cameraCoefficients.put(0, 0, api.getNavCamIntrinsics()[1]);
         cameraCoefficients.convertTo(cameraCoefficients, CvType.CV_64F);
+
+
 
         // Undistort image
         Mat undistortImg = new Mat();
@@ -423,6 +433,8 @@ public class YourService extends KiboRpcService {
 
         return maxIndex;
     }
+
+
 
 
 }

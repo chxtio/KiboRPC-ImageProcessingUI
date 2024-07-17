@@ -4,32 +4,46 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <!-- Match Templates Button -->
-    <Button
-        android:id="@+id/buttonMatchTemplate"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:text="Match Templates" />
-
-    <!-- Display Main Image Button -->
+    <!-- View Main Image Button -->
     <Button
         android:id="@+id/buttonDisplayMainImage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="NavCam"
+        android:layout_alignParentStart="true"
         android:layout_alignParentBottom="true"
-        android:layout_toLeftOf="@id/buttonMatchTemplate"
-        android:layout_marginLeft="26dp"
         android:layout_marginStart="16dp"
-        android:text="NavCam" />
+        android:layout_marginBottom="16dp" />
+
+    <!-- View Detect AR Button -->
+    <Button
+        android:id="@+id/buttonDetectAR"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Detect AR"
+        android:layout_toEndOf="@id/buttonDisplayMainImage"
+        android:layout_toStartOf="@id/buttonMatchTemplate"
+        android:layout_alignBaseline="@id/buttonDisplayMainImage"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp" />
+
+    <!-- View Match Templates Button -->
+    <Button
+        android:id="@+id/buttonMatchTemplate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Match"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp" />
 
     <!-- ImageView for displaying the main image -->
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@id/buttonMatchTemplate"
+        android:layout_above="@id/buttonDisplayMainImage"
         android:layout_marginBottom="16dp"
         android:adjustViewBounds="true"
         android:scaleType="fitCenter"

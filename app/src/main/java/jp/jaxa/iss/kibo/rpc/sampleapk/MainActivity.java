@@ -1,11 +1,13 @@
 package jp.jaxa.iss.kibo.rpc.sampleapk;
 
+import android.Manifest;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,6 +16,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,20 +29,36 @@ import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.aruco.Aruco;
 import org.opencv.aruco.Dictionary;
+import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfDouble;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import jp.jaxa.iss.kibo.rpc.api.KiboRpcApi;
+import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
+import jp.jaxa.iss.kibo.rpc.sampleapk.YourService;
+
 public class MainActivity extends AppCompatActivity {
+
+
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
+
     private static final String TAG = MainActivity.class.getSimpleName();
     private List<String> imageFileNames;
     private List<String> mainImageFileNames;
@@ -47,17 +66,26 @@ public class MainActivity extends AppCompatActivity {
     private List<Mat> templates = new ArrayList<>();
     private int bestMatchIndex = -1;
     private boolean templateMatchingStarted = false;
+    private boolean detectARStarted = false;
     private RecyclerView recyclerView;
     private TemplateAdapter templateAdapter;
 
     private ImageView imageView;
     private Button buttonMatchTemplate;
     private Button buttonDisplayMainImage;
+    private Button buttonDetectAR;
+
+//    private YourService yourService;
+//    private KiboRpcApi api;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+//        yourService = new YourService(); // Instantiate YourService
+//        KiboRpcApi api = KiboRpcApi.getInstance(); // Obtain the KiboRpcApi instance as required
+
+
         if (!OpenCVLoader.initDebug()) {
             Log.e(TAG, "OpenCV initialization failed.");
         } else {
@@ -68,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
         imageView = findViewById(R.id.imageView);
         buttonMatchTemplate= findViewById(R.id.buttonMatchTemplate);
         buttonDisplayMainImage = findViewById(R.id.buttonDisplayMainImage);
+        buttonDetectAR = findViewById(R.id.buttonDetectAR);
 
         // Load templates and image filenames (replace with your actual methods)
         loadImages();
@@ -82,7 +111,16 @@ public class MainActivity extends AppCompatActivity {
         templateAdapter = new TemplateAdapter(templates, imageFileNames);
         recyclerView.setAdapter(templateAdapter);
 
-        displayMainImage(); // NavCam sample image
+//        displayMainImage(); // NavCam sample image
+
+        // Button click listener for viewing pose estimation
+        buttonDetectAR.setOnClickListener(v -> {
+            if (!detectARStarted){
+                pose_estimation(mainImage);
+                detectARStarted = true;
+            }
+            displayMainImage();
+        });
 
         // Button click listener for processing image
         buttonMatchTemplate.setOnClickListener(v -> {
@@ -103,7 +141,17 @@ public class MainActivity extends AppCompatActivity {
         imageView.setVisibility(View.VISIBLE);
         recyclerView.setVisibility(View.GONE);
         setTitle("NavCam");
-        detectAR(mainImage);
+
+        // Todo move out of UI thread
+        // Call correctImageDistortion from YourService
+//        Mat undistortedImage = yourService.correctImageDistortion(mainImage);
+//        correctImageDistortion(mainImage);
+//        File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+//        File file = new File(directory, "undistorted_image.png");
+//        Imgcodecs.imwrite(file.getAbsolutePath(), undistortedImage);
+//        Imgcodecs.imwrite("undistorted_image.png", undistortedImage); // Save undistortedImage
+//        detectAR(mainImage);
+//        pose_estimation(mainImage);
     }
 
     private void showTemplates() {
@@ -131,7 +179,6 @@ public class MainActivity extends AppCompatActivity {
             Mat[] templatesArray = templates.toArray(new Mat[0]);
             int[] templateMatchCnt = new int[templatesArray.length];
             Mat result = new Mat();
-
 
             for (int tempNum = 0; tempNum < templatesArray.length; tempNum++) {
                 String fileName = imageFileNames.get(tempNum);
@@ -418,6 +465,94 @@ public class MainActivity extends AppCompatActivity {
         return maxIndex;
     }
 
+    private void pose_estimation(Mat image){
+        Log.e(TAG, "Getting calibration parameters");
+//        correctImageDistortion(image);
+        // Hardcoded camera matrix values
+        double[][] cameraMatrixValues = {
+                {1000.0, 0.0, 320.0}, // Replace with actual values
+                {0.0, 1000.0, 240.0}, // Replace with actual values
+                {0.0, 0.0, 1.0}       // Replace with actual values
+        };
+
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
+        for (int i = 0; i < cameraMatrixValues.length; i++) {
+            cameraMatrix.put(i, 0, cameraMatrixValues[i]);
+        }
+
+        // Hardcoded camera coefficients values
+        double[] cameraCoefficientsValues = {0.1, -0.2, 0.0, 0.0, 0.1}; // Replace with actual values
+
+        Mat cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
+        cameraCoefficients.put(0, 0, cameraCoefficientsValues);
+
+        // Undistort image
+        Mat undistortImg = new Mat();
+        Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
+
+        Log.e(TAG, "Undistorted image");
+        undistortImg.copyTo(image);
+
+        // Detect ArUco marker and draw markers/id
+//        detectAR(image);
+
+        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
+        List<Mat> corners = new ArrayList<>();
+        Mat markerIds = new Mat();
+        Imgproc.cvtColor(image, image, Imgproc.COLOR_RGBA2RGB);
+//        Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_GRAY2RGB); // Convert to grayscale
+        Log.i(TAG, "in detectAR: Image Mat type: " + image.type() + " (" + CvType.typeToString(image.type()) + ")");
+        Aruco.detectMarkers(image, dictionary, corners, markerIds); // Detect markers and store the corners and IDs
+
+//        Imgproc.cvtColor(image, image, Imgproc.COLOR_GRAY2RGB); // Convert image to RGB color space
+        // Draw detected markers on image
+        if (!markerIds.empty()) {
+            Scalar green = new Scalar(0, 255, 0);
+            Scalar red = new Scalar(255, 0, 0);
+            Aruco.drawDetectedMarkers(image, corners); //, markerIds, green);
+            // Draw marker ID label
+            if (corners.size() > 0) {
+                Mat firstCorner = corners.get(0);
+                double x = firstCorner.get(0, 0)[0];
+                double y = firstCorner.get(0, 0)[1];
+                org.opencv.core.Point labelPos = new org.opencv.core.Point(x, y - 30); // Offset
+                int markerId = (int) markerIds.get(0, 0)[0];
+                Imgproc.putText(image, "id=" + markerId, labelPos, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, red, 2);
+            }
+            Log.i(TAG, "Markers detected: " + markerIds.dump());
+        } else {
+            Log.i(TAG, "No markers detected.");
+        }
+
+        // Estimate pose of ArUco markers
+        Log.e(TAG, "Estimating pose");
+        if(!markerIds.empty()){
+            Mat rvecs = new Mat();
+            Mat tvecs = new Mat();
+            MatOfDouble rvec = new MatOfDouble();
+            MatOfDouble tvec = new MatOfDouble();
+            MatOfDouble distCoeffs = new MatOfDouble(cameraCoefficients);
+            Aruco.estimatePoseSingleMarkers(corners, 0.05f, cameraMatrix, distCoeffs, rvecs, tvecs);
+
+            for(int i = 0; i < markerIds.rows(); i++) {
+                Aruco.drawAxis(image, cameraMatrix, distCoeffs, rvecs.row(i), tvecs.row(i), 0.1f);
+            }
+
+            // Display or use undistorted image with pose estimation
+            // Example: display undistorted image
+//             Highgui.imshow("Undistorted Image", undistortImg);
+//             Highgui.waitKey(0);
+
+            // Optionally, copy undistorted image back to the original image
+//            undistortImg.copyTo(image);
+            Log.e(TAG, "Estimating pose complete: check output");
+            Toast.makeText(getApplicationContext(), "Pose estimation complete!", Toast.LENGTH_SHORT).show();
+
+        }
+
+
+    }
+
     // Detect AR and draw markers
     private void detectAR(Mat image) {
         Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
@@ -446,22 +581,37 @@ public class MainActivity extends AppCompatActivity {
                 int markerId = (int) markerIds.get(0, 0)[0];
                 Imgproc.putText(image, "id=" + markerId, labelPos, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, red, 2);
             }
-
-
-//            // Log details about the image after converting to RGB
-//            Log.i(TAG, "Image Mat size after converting to RGB: " + image.size());
-//            Log.i(TAG, "Image Mat type after converting to RGB: " + image.type() + " (" + CvType.typeToString(image.type()) + ")");
-//            Log.i(TAG, "Image Mat channels after converting to RGB: " + image.channels());
-//            // Convert back to gray
-//            Imgproc.cvtColor(image, image, Imgproc.COLOR_RGB2GRAY);
-//            // Log details about the image after converting back to grayscale
-//            Log.i(TAG, "Image Mat size after converting back to grayscale: " + image.size());
-//            Log.i(TAG, "Image Mat type after converting back to grayscale: " + image.type() + " (" + CvType.typeToString(image.type()) + ")");
-//            Log.i(TAG, "Image Mat channels after converting back to grayscale: " + image.channels());
-
             Log.i(TAG, "Markers detected: " + markerIds.dump());
         } else {
             Log.i(TAG, "No markers detected.");
         }
+    }
+
+    public void correctImageDistortion(Mat image) {
+        // Hardcoded camera matrix values
+        double[][] cameraMatrixValues = {
+                {1000.0, 0.0, 320.0}, // Replace with actual values
+                {0.0, 1000.0, 240.0}, // Replace with actual values
+                {0.0, 0.0, 1.0}       // Replace with actual values
+        };
+
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
+        for (int i = 0; i < cameraMatrixValues.length; i++) {
+            cameraMatrix.put(i, 0, cameraMatrixValues[i]);
+        }
+
+        // Hardcoded camera coefficients values
+        double[] cameraCoefficientsValues = {0.1, -0.2, 0.0, 0.0, 0.1}; // Replace with actual values
+
+        Mat cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
+        cameraCoefficients.put(0, 0, cameraCoefficientsValues);
+
+        // Undistort image
+        Mat undistortImg = new Mat();
+        Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
+
+        Log.e(TAG, "Undistorted image");
+//        return undistortImg;
+        undistortImg.copyTo(image);
     }
 }
