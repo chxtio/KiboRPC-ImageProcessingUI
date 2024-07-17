@@ -7,5 +7,17 @@
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
     </style>
+    <style name="BlueButton" parent="Widget.AppCompat.Button">
+        <item name="android:backgroundTint">@color/blue</item>
+        <item name="android:textColor">@android:color/white</item>
+    </style>
+    <style name="RedButton" parent="Widget.AppCompat.Button">
+        <item name="android:backgroundTint">@color/red</item>
+        <item name="android:textColor">@android:color/white</item>
+    </style>
+    <style name="GreenButton" parent="Widget.AppCompat.Button">
+        <item name="android:backgroundTint">@color/green</item>
+        <item name="android:textColor">@android:color/white</item>
+    </style>
 
 </resources>

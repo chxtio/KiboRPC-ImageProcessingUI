@@ -7,6 +7,7 @@
     <!-- View Main Image Button -->
     <Button
         android:id="@+id/buttonDisplayMainImage"
+        style="@style/BlueButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="NavCam"
@@ -18,9 +19,10 @@
     <!-- View Detect AR Button -->
     <Button
         android:id="@+id/buttonDetectAR"
+        style="@style/RedButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Detect AR"
+        android:text="Undistort"
         android:layout_toEndOf="@id/buttonDisplayMainImage"
         android:layout_toStartOf="@id/buttonMatchTemplate"
         android:layout_alignBaseline="@id/buttonDisplayMainImage"
@@ -30,6 +32,7 @@
     <!-- View Match Templates Button -->
     <Button
         android:id="@+id/buttonMatchTemplate"
+        style="@style/GreenButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Match"

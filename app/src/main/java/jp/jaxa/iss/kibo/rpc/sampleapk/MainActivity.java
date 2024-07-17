@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
     private List<Mat> templates = new ArrayList<>();
     private int bestMatchIndex = -1;
     private boolean templateMatchingStarted = false;
+    private boolean undistortStarted = false;
     private boolean detectARStarted = false;
     private RecyclerView recyclerView;
     private TemplateAdapter templateAdapter;
@@ -76,6 +77,9 @@ public class MainActivity extends AppCompatActivity {
     private Button buttonMatchTemplate;
     private Button buttonDisplayMainImage;
     private Button buttonDetectAR;
+
+    private Mat cameraMatrix;
+    private Mat cameraCoefficients;
 
 //    private YourService yourService;
 //    private KiboRpcApi api;
@@ -117,11 +121,15 @@ public class MainActivity extends AppCompatActivity {
 
         // Button click listener for viewing pose estimation
         buttonDetectAR.setOnClickListener(v -> {
-            if (!detectARStarted){
+            if (!undistortStarted){
+                correctImageDistortion(mainImage);
+                buttonDetectAR.setText("Detect AR");
+                undistortStarted = true;
+            } else if (!detectARStarted){
                 pose_estimation(mainImage);
                 detectARStarted = true;
             }
-            displayMainImage();
+              displayMainImage();
         });
 
         // Button click listener for processing image
@@ -470,32 +478,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void pose_estimation(Mat image){
-        Log.e(TAG, "Getting calibration parameters");
-//        correctImageDistortion(image);
-        // Hardcoded camera matrix values
-        double[][] cameraMatrixValues = {
-                {1000.0, 0.0, 320.0}, // Replace with actual values
-                {0.0, 1000.0, 240.0}, // Replace with actual values
-                {0.0, 0.0, 1.0}       // Replace with actual values
-        };
 
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
-        for (int i = 0; i < cameraMatrixValues.length; i++) {
-            cameraMatrix.put(i, 0, cameraMatrixValues[i]);
-        }
 
-        // Hardcoded camera coefficients values
-        double[] cameraCoefficientsValues = {0.1, -0.2, 0.0, 0.0, 0.1}; // Replace with actual values
-
-        Mat cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
-        cameraCoefficients.put(0, 0, cameraCoefficientsValues);
-
-        // Undistort image
-        Mat undistortImg = new Mat();
-        Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
-
-        Log.e(TAG, "Undistorted image");
-        undistortImg.copyTo(image);
 
         // Detect ArUco marker and draw markers/id
 //        detectAR(image);
@@ -542,12 +526,6 @@ public class MainActivity extends AppCompatActivity {
                 Aruco.drawAxis(image, cameraMatrix, distCoeffs, rvecs.row(i), tvecs.row(i), 0.1f);
             }
 
-            // Display or use undistorted image with pose estimation
-            // Example: display undistorted image
-//             Highgui.imshow("Undistorted Image", undistortImg);
-//             Highgui.waitKey(0);
-
-            // Optionally, copy undistorted image back to the original image
 //            undistortImg.copyTo(image);
             Log.e(TAG, "Estimating pose complete: check output");
             Toast.makeText(getApplicationContext(), "Pose estimation complete!", Toast.LENGTH_SHORT).show();
@@ -592,30 +570,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void correctImageDistortion(Mat image) {
-        // Hardcoded camera matrix values
-        double[][] cameraMatrixValues = {
-                {1000.0, 0.0, 320.0}, // Replace with actual values
-                {0.0, 1000.0, 240.0}, // Replace with actual values
-                {0.0, 0.0, 1.0}       // Replace with actual values
-        };
-
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
-        for (int i = 0; i < cameraMatrixValues.length; i++) {
-            cameraMatrix.put(i, 0, cameraMatrixValues[i]);
-        }
-
-        // Hardcoded camera coefficients values
-        double[] cameraCoefficientsValues = {0.1, -0.2, 0.0, 0.0, 0.1}; // Replace with actual values
-
-        Mat cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
-        cameraCoefficients.put(0, 0, cameraCoefficientsValues);
+        loadCameraParameters();
 
         // Undistort image
         Mat undistortImg = new Mat();
         Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
 
         Log.e(TAG, "Undistorted image");
-//        return undistortImg;
         undistortImg.copyTo(image);
+        Toast.makeText(getApplicationContext(), "Corrected image distortion", Toast.LENGTH_SHORT).show();
+    }
+
+    private void loadCameraParameters() {
+        Log.e(TAG, "Getting calibration parameters");
+        double[][] cameraMatrixValues = {
+                {1000.0, 0.0, 320.0}, // Hardcoded values
+                {0.0, 1000.0, 240.0},
+                {0.0, 0.0, 1.0}
+        };
+
+        cameraMatrix = new Mat(3, 3, CvType.CV_64F);
+        for (int i = 0; i < cameraMatrixValues.length; i++) {
+            cameraMatrix.put(i, 0, cameraMatrixValues[i]);
+        }
+
+        double[] cameraCoefficientsValues = {0.1, -0.2, 0.0, 0.0, 0.1}; // Hardcoded values
+        cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
+        cameraCoefficients.put(0, 0, cameraCoefficientsValues);
     }
 }
