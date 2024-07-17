@@ -41,12 +41,15 @@ public class MainActivity extends AppCompatActivity {
     private List<String> mainImageFileNames;
     private Mat mainImage;
     private List<Mat> templates = new ArrayList<>();
+    private int bestMatchIndex = -1;
+    private boolean templateMatchingStarted = false;
     private RecyclerView recyclerView;
     private TemplateAdapter templateAdapter;
 
     private ImageView imageView;
-    private SeekBar seekBar;
     private Button buttonProcess;
+    private Button buttonDisplayMainImage;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,8 +63,8 @@ public class MainActivity extends AppCompatActivity {
         // Initialize views
         recyclerView = findViewById(R.id.recyclerView);
         imageView = findViewById(R.id.imageView);
-//        seekBar = findViewById(R.id.seekBar);
         buttonProcess = findViewById(R.id.buttonProcess);
+        buttonDisplayMainImage = findViewById(R.id.buttonDisplayMainImage);
 
         // Load templates and image filenames (replace with your actual methods)
         loadImages();
@@ -70,35 +73,43 @@ public class MainActivity extends AppCompatActivity {
         Mat[] templateMats = loadTemplateImages(imageFileNames);
         templates.addAll(Arrays.asList(templateMats));
 
-        // Setup RecyclerView
-//        recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-
         // Setup RecyclerView with GridLayoutManager (3 columns)
         GridLayoutManager layoutManager = new GridLayoutManager(this, 3);
         recyclerView.setLayoutManager(layoutManager);
         templateAdapter = new TemplateAdapter(templates, imageFileNames);
         recyclerView.setAdapter(templateAdapter);
 
+        displayMainImage();
+        // Button click listener for processing image
+        buttonProcess.setOnClickListener(v -> {
+            if(bestMatchIndex == -1 && !templateMatchingStarted){
+                processImage();
+                templateMatchingStarted = true;
+            }
+            showTemplates();
+        });
 
-        // Button click listener
-        buttonProcess.setOnClickListener(v -> processImage());
+        // Button click listener for displaying main image
+        buttonDisplayMainImage.setOnClickListener(v -> displayMainImage());
+    }
 
-//        // SeekBar change listener
-//        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-//            @Override
-//            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-//                // Adjust processing parameters based on seekBar value
-//            }
-//
-//            @Override
-//            public void onStartTrackingTouch(SeekBar seekBar) {
-//            }
-//
-//            @Override
-//            public void onStopTrackingTouch(SeekBar seekBar) {
-//                processImage();
-//            }
-//        });
+    private void displayMainImage() {
+        Bitmap bitmap = Bitmap.createBitmap(mainImage.cols(), mainImage.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(mainImage, bitmap);
+        imageView.setImageBitmap(bitmap);
+        imageView.setVisibility(View.VISIBLE);
+        recyclerView.setVisibility(View.GONE);
+        setTitle("NavCam");
+    }
+
+    private void showTemplates() {
+        imageView.setVisibility(View.GONE);
+        recyclerView.setVisibility(View.VISIBLE);
+        if (bestMatchIndex != -1) {
+            setTitle("Best Match: " + imageFileNames.get(bestMatchIndex).replace(".png", ""));
+        } else {
+            setTitle("Template Matching...");
+        }
     }
 
     private void processImage() {
@@ -110,13 +121,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private class TemplateMatchingTask extends AsyncTask<Void, Integer, Integer> {
+//        private int bestMatchIndex = -1;
 
         @Override
         protected Integer doInBackground(Void... voids) {
-            runOnUiThread(() -> {
-            setTitle("Template Matching...");
-            });
-
             Mat[] templatesArray = templates.toArray(new Mat[0]);
             int[] templateMatchCnt = new int[templatesArray.length];
             Mat result = new Mat();
@@ -192,20 +200,19 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(Integer bestMatchIndex) {
-            // Update UI with best match information
+//            // Update UI with best match information
             String bestMatchFilename = imageFileNames.get(bestMatchIndex);
             String bestMatch = bestMatchFilename.substring(0, bestMatchFilename.length() - 4);
 
+//            // Set bestMatchIndex and update UI
+            templateAdapter.setBestMatchIndex(bestMatchIndex);
+
             // Set title on the main thread
             runOnUiThread(() -> {
-                setTitle("Best Match: " + bestMatch);
-                Log.i(TAG, "Best match: " + bestMatch);
+                if (recyclerView.getVisibility() == View.VISIBLE) {
+                    setTitle("Best Match: " + bestMatch);
+                }
             });
-
-            // Highlight the best match in the adapter
-            templateAdapter.setBestMatchIndex(bestMatchIndex);
-            templateAdapter.setCustomHighlightColor(ContextCompat.getColor(MainActivity.this, R.color.custom_highlight_color));
-            templateAdapter.setCurrentTemplateIndex(bestMatchIndex);
         }
     }
 
@@ -277,7 +284,7 @@ public class MainActivity extends AppCompatActivity {
         private List<Mat> templates;
         private List<String> imageFileNames;
         private int currentTemplateIndex = -1;
-        private int bestMatchIndex = -1;
+//        private int bestMatchIndex = -1;
         private int customHighlightColor = Color.RED; // Default highlight color
 
 
@@ -300,7 +307,6 @@ public class MainActivity extends AppCompatActivity {
             bestMatchIndex = index;
             notifyDataSetChanged(); // Notify adapter that data set changed to reflect new best match index
         }
-
 
         @NonNull
         @Override
@@ -343,17 +349,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-//        class TemplateViewHolder extends RecyclerView.ViewHolder {
-//            ImageView imageView;
-//            TextView textViewLabel;
-//
-//            TemplateViewHolder(View itemView) {
-//                super(itemView);
-//                imageView = itemView.findViewById(R.id.imageViewTemplate);
-//                textViewLabel = itemView.findViewById(R.id.textViewLabel);
-//            }
-//        }
-//    }
 
 
     // Remove multiple detections
