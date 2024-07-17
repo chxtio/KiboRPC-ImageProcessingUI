@@ -4,9 +4,9 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <!-- Process Image Button -->
+    <!-- Match Templates Button -->
     <Button
-        android:id="@+id/buttonProcess"
+        android:id="@+id/buttonMatchTemplate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
@@ -19,7 +19,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_toLeftOf="@id/buttonProcess"
+        android:layout_toLeftOf="@id/buttonMatchTemplate"
         android:layout_marginLeft="26dp"
         android:layout_marginStart="16dp"
         android:text="NavCam" />
@@ -29,7 +29,7 @@
         android:id="@+id/imageView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@id/buttonProcess"
+        android:layout_above="@id/buttonMatchTemplate"
         android:layout_marginBottom="16dp"
         android:adjustViewBounds="true"
         android:scaleType="fitCenter"

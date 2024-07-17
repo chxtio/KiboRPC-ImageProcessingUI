@@ -24,8 +24,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
+import org.opencv.aruco.Aruco;
+import org.opencv.aruco.Dictionary;
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
@@ -47,9 +51,8 @@ public class MainActivity extends AppCompatActivity {
     private TemplateAdapter templateAdapter;
 
     private ImageView imageView;
-    private Button buttonProcess;
+    private Button buttonMatchTemplate;
     private Button buttonDisplayMainImage;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
         // Initialize views
         recyclerView = findViewById(R.id.recyclerView);
         imageView = findViewById(R.id.imageView);
-        buttonProcess = findViewById(R.id.buttonProcess);
+        buttonMatchTemplate= findViewById(R.id.buttonMatchTemplate);
         buttonDisplayMainImage = findViewById(R.id.buttonDisplayMainImage);
 
         // Load templates and image filenames (replace with your actual methods)
@@ -79,12 +82,12 @@ public class MainActivity extends AppCompatActivity {
         templateAdapter = new TemplateAdapter(templates, imageFileNames);
         recyclerView.setAdapter(templateAdapter);
 
-        displayMainImage();
+        displayMainImage(); // NavCam sample image
+
         // Button click listener for processing image
-        buttonProcess.setOnClickListener(v -> {
+        buttonMatchTemplate.setOnClickListener(v -> {
             if(bestMatchIndex == -1 && !templateMatchingStarted){
-                processImage();
-                templateMatchingStarted = true;
+                runTemplateMatching();
             }
             showTemplates();
         });
@@ -100,6 +103,7 @@ public class MainActivity extends AppCompatActivity {
         imageView.setVisibility(View.VISIBLE);
         recyclerView.setVisibility(View.GONE);
         setTitle("NavCam");
+        detectAR(mainImage);
     }
 
     private void showTemplates() {
@@ -112,22 +116,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void processImage() {
-        // Implement image processing logic here
-        // Update imageView and RecyclerView based on processing results
+    private void runTemplateMatching() {
         // Execute the AsyncTask for template matching
         TemplateMatchingTask templateMatchingTask = new TemplateMatchingTask();
         templateMatchingTask.execute();
+        templateMatchingStarted = true;
     }
 
-    private class TemplateMatchingTask extends AsyncTask<Void, Integer, Integer> {
-//        private int bestMatchIndex = -1;
 
+
+    private class TemplateMatchingTask extends AsyncTask<Void, Integer, Integer> {
         @Override
         protected Integer doInBackground(Void... voids) {
             Mat[] templatesArray = templates.toArray(new Mat[0]);
             int[] templateMatchCnt = new int[templatesArray.length];
             Mat result = new Mat();
+
 
             for (int tempNum = 0; tempNum < templatesArray.length; tempNum++) {
                 String fileName = imageFileNames.get(tempNum);
@@ -139,10 +143,11 @@ public class MainActivity extends AppCompatActivity {
 
                 publishProgress(tempNum); // Update UI with the current template index
 
-                // Perform the matching process here...
+                // Perform the matching process
                 int matchCnt = 0;
                 List<org.opencv.core.Point> matches = new ArrayList<>();
                 Mat template = templatesArray[tempNum].clone();
+                Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGB2GRAY); // Convert main image to gray
                 Mat targetImg = mainImage.clone();
 
                 int widthMin = 20; // [px]
@@ -200,11 +205,11 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(Integer bestMatchIndex) {
-//            // Update UI with best match information
+            // Update UI with best match information
             String bestMatchFilename = imageFileNames.get(bestMatchIndex);
             String bestMatch = bestMatchFilename.substring(0, bestMatchFilename.length() - 4);
 
-//            // Set bestMatchIndex and update UI
+            // Set bestMatchIndex and update UI
             templateAdapter.setBestMatchIndex(bestMatchIndex);
 
             // Set title on the main thread
@@ -216,17 +221,18 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     private void loadMainImage() {
         AssetManager assetManager = getAssets();
         try {
-            Log.e(TAG, "Loading mainImage: " + "image_detected_markers.png");
-            InputStream inputStream = assetManager.open("images/image_detected_markers.png");
+            Log.e(TAG, "Loading mainImage: " + "image.png");
+            InputStream inputStream = assetManager.open("images/image.png");
             Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
             // Convert bitmap to Mat
             Utils.bitmapToMat(bitmap, mainImage);
             // Convert to grayscale
-            Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGB2GRAY);
+//            Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGBA2RGB);
+//            Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGB2GRAY); // Original
+            Log.i(TAG, "Image Mat type: " + mainImage.type() + " (" + CvType.typeToString(mainImage.type()) + ")");
             inputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -235,13 +241,12 @@ public class MainActivity extends AppCompatActivity {
 
     // Retrieve template image filenames from assets
     private void loadImages() {
-
         try {
             String[] assetFileNames = getAssets().list("images");
             imageFileNames = new ArrayList<>(Arrays.asList(assetFileNames));
             // Remove specific files
             imageFileNames.removeAll(Arrays.asList("android-logo-mask.png", "android-logo-shine.png", "clock64.png",
-                    "clock_font.png", "image_detected_markers.png"));
+                    "clock_font.png", "image.png"));
             Log.e(TAG, "Loaded " + imageFileNames.size() + " image filenames: " + imageFileNames);
 
         } catch (IOException e) {
@@ -284,9 +289,7 @@ public class MainActivity extends AppCompatActivity {
         private List<Mat> templates;
         private List<String> imageFileNames;
         private int currentTemplateIndex = -1;
-//        private int bestMatchIndex = -1;
         private int customHighlightColor = Color.RED; // Default highlight color
-
 
         TemplateAdapter(List<Mat> templates, List<String> imageFileNames) {
             this.templates = templates;
@@ -323,7 +326,7 @@ public class MainActivity extends AppCompatActivity {
             holder.imageView.setImageBitmap(bitmap);
             holder.textViewLabel.setText(imageFileNames.get(position));
 
-            // Optionally highlight the best match or current template
+            // Highlight the current template or the best match
             if (position == bestMatchIndex) {
                 holder.itemView.setBackgroundColor(customHighlightColor);
             } else if (position == currentTemplateIndex){
@@ -349,7 +352,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
 
     // Remove multiple detections
     public static List<org.opencv.core.Point> removeDuplicates(List<org.opencv.core.Point> points) {
@@ -414,5 +416,52 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return maxIndex;
+    }
+
+    // Detect AR and draw markers
+    private void detectAR(Mat image) {
+        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
+        List<Mat> corners = new ArrayList<>();
+        Mat markerIds = new Mat();
+        Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGBA2RGB);
+//        Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_GRAY2RGB); // Convert to grayscale
+        Log.i(TAG, "in detectAR: Image Mat type: " + mainImage.type() + " (" + CvType.typeToString(mainImage.type()) + ")");
+        Aruco.detectMarkers(image, dictionary, corners, markerIds); // Detect markers and store the corners and IDs
+
+        // Convert image to RGB color space
+//        Imgproc.cvtColor(image, image, Imgproc.COLOR_GRAY2RGB);
+
+        // Draw detected markers on image
+        if (!markerIds.empty()) {
+            Scalar green = new Scalar(0, 255, 0);
+            Scalar red = new Scalar(255, 0, 0);
+            Aruco.drawDetectedMarkers(image, corners); //, markerIds, green);
+
+            // Draw marker ID label
+            if (corners.size() > 0) {
+                Mat firstCorner = corners.get(0);
+                double x = firstCorner.get(0, 0)[0];
+                double y = firstCorner.get(0, 0)[1];
+                org.opencv.core.Point labelPos = new org.opencv.core.Point(x, y - 30); // Offset
+                int markerId = (int) markerIds.get(0, 0)[0];
+                Imgproc.putText(image, "id=" + markerId, labelPos, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, red, 2);
+            }
+
+
+//            // Log details about the image after converting to RGB
+//            Log.i(TAG, "Image Mat size after converting to RGB: " + image.size());
+//            Log.i(TAG, "Image Mat type after converting to RGB: " + image.type() + " (" + CvType.typeToString(image.type()) + ")");
+//            Log.i(TAG, "Image Mat channels after converting to RGB: " + image.channels());
+//            // Convert back to gray
+//            Imgproc.cvtColor(image, image, Imgproc.COLOR_RGB2GRAY);
+//            // Log details about the image after converting back to grayscale
+//            Log.i(TAG, "Image Mat size after converting back to grayscale: " + image.size());
+//            Log.i(TAG, "Image Mat type after converting back to grayscale: " + image.type() + " (" + CvType.typeToString(image.type()) + ")");
+//            Log.i(TAG, "Image Mat channels after converting back to grayscale: " + image.channels());
+
+            Log.i(TAG, "Markers detected: " + markerIds.dump());
+        } else {
+            Log.i(TAG, "No markers detected.");
+        }
     }
 }
