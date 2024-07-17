@@ -42,8 +42,10 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -64,7 +66,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
     private List<String> imageFileNames;
     private List<String> mainImageFileNames;
+    private String assetFileName = "images/image.png";
     private Mat mainImage;
+    private Mat mainImageView;
     private List<Mat> templates = new ArrayList<>();
     private int bestMatchIndex = -1;
     private boolean templateMatchingStarted = false;
@@ -113,9 +117,10 @@ public class MainActivity extends AppCompatActivity {
         buttonDisplayMainImage = findViewById(R.id.buttonDisplayMainImage);
         buttonDetectAR = findViewById(R.id.buttonDetectAR);
 
-        // Load templates and image filenames (replace with your actual methods)
+        // Load templates and image filenames
         loadImages();
         mainImage = new Mat();
+        loadMainImageView();
         loadMainImage();
         Mat[] templateMats = loadTemplateImages(imageFileNames);
         templates.addAll(Arrays.asList(templateMats));
@@ -126,23 +131,23 @@ public class MainActivity extends AppCompatActivity {
         templateAdapter = new TemplateAdapter(templates, imageFileNames);
         recyclerView.setAdapter(templateAdapter);
 
-        displayMainImage(); // NavCam sample image
+        displayMainImage(mainImageView); // NavCam sample image
 
         // Button click listener for viewing pose estimation
         buttonDetectAR.setOnClickListener(v -> {
             if (!undistortStarted){
-                correctImageDistortion(mainImage);
+                correctImageDistortion(mainImageView);
                 buttonDetectAR.setText("Detect AR");
                 undistortStarted = true;
             } else if (!detectARStarted){
-                detectAR(mainImage);
+                detectAR(mainImageView);
                 buttonDetectAR.setText("Estimate Pose");
                 detectARStarted = true;
             } else if (!estimatePoseStarted) {
-                pose_estimation(mainImage);
+                pose_estimation(mainImageView);
                 estimatePoseStarted = true;
             }
-              displayMainImage();
+              displayMainImage(mainImageView);
         });
 
         // Button click listener for processing image
@@ -154,14 +159,14 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Button click listener for displaying main image
-        buttonDisplayMainImage.setOnClickListener(v -> displayMainImage());
+        buttonDisplayMainImage.setOnClickListener(v -> displayMainImage(mainImageView));
 
     }
 
 
-    private void displayMainImage() {
-        Bitmap bitmap = Bitmap.createBitmap(mainImage.cols(), mainImage.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(mainImage, bitmap);
+    private void displayMainImage(Mat image) {
+        Bitmap bitmap = Bitmap.createBitmap(image.cols(), image.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(image, bitmap);
         imageView.setImageBitmap(bitmap);
         imageView.setVisibility(View.VISIBLE);
         recyclerView.setVisibility(View.GONE);
@@ -206,7 +211,7 @@ public class MainActivity extends AppCompatActivity {
                 int matchCnt = 0;
                 List<org.opencv.core.Point> matches = new ArrayList<>();
                 Mat template = templatesArray[tempNum].clone();
-                Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGB2GRAY); // Convert main image to gray
+//                Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGB2GRAY); // Convert main image to gray
                 Mat targetImg = mainImage.clone();
 
                 int widthMin = 20; // [px]
@@ -220,7 +225,7 @@ public class MainActivity extends AppCompatActivity {
                         Mat rotResizedTemp = rotImage(resizedTemp, j);
 
                         Imgproc.matchTemplate(targetImg, rotResizedTemp, result, Imgproc.TM_CCOEFF_NORMED);
-                        double threshold = 0.75;
+                        double threshold = 0.69;//0.66;//0.75;
                         Core.MinMaxLocResult mmlr = Core.minMaxLoc(result);
                         double maxVal = mmlr.maxVal;
 
@@ -283,17 +288,60 @@ public class MainActivity extends AppCompatActivity {
     private void loadMainImage() {
         AssetManager assetManager = getAssets();
         try {
-            Log.e(TAG, "Loading mainImage: " + "image.png");
-            InputStream inputStream = assetManager.open("images/image.png");
+//            String assetFileName = "images/file_name.png";
+            Log.e(TAG, "Loading mainImage: " + assetFileName);
+            InputStream inputStream = assetManager.open(assetFileName);
             Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
             // Convert bitmap to Mat
             Utils.bitmapToMat(bitmap, mainImage);
             // Convert to grayscale
 //            Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGBA2RGB);
-//            Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGB2GRAY); // Original
+            Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGB2GRAY); // Original
             Log.i(TAG, "Image Mat type: " + mainImage.type() + " (" + CvType.typeToString(mainImage.type()) + ")");
             inputStream.close();
         } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void copyAssetImage(String assetFileName, String targetFileName) {
+        AssetManager assetManager = getAssets();
+        try {
+            InputStream in = assetManager.open(assetFileName);
+            File outFile = new File(getCacheDir(), targetFileName);
+            OutputStream out = new FileOutputStream(outFile);
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+            in.close();
+            out.flush();
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadMainImageView() {
+//        AssetManager assetManager = getAssets();
+        // Copy the image from assets to the cache directory
+//        String assetFileName = "images/image.png";
+        String targetFileName = "image_copy.png";
+        copyAssetImage(assetFileName, targetFileName);
+        try {
+            Log.e(TAG, "Loading mainImageView: " + targetFileName);
+            File copiedImageFile = new File(getCacheDir(), targetFileName);
+            Bitmap bitmap = BitmapFactory.decodeFile(copiedImageFile.getAbsolutePath());
+
+            mainImageView = new Mat();
+            // Convert bitmap to Mat
+            Utils.bitmapToMat(bitmap, mainImageView);
+            // Convert to grayscale
+//            Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGBA2RGB);
+//            Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGB2GRAY); // Original
+            Log.i(TAG, "Image Mat type: " + mainImageView.type() + " (" + CvType.typeToString(mainImageView.type()) + ")");
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -305,7 +353,7 @@ public class MainActivity extends AppCompatActivity {
             imageFileNames = new ArrayList<>(Arrays.asList(assetFileNames));
             // Remove specific files
             imageFileNames.removeAll(Arrays.asList("android-logo-mask.png", "android-logo-shine.png", "clock64.png",
-                    "clock_font.png", "image.png"));
+                    "clock_font.png", "image.png", "image_view.png", "file_name.png"));
             Log.e(TAG, "Loaded " + imageFileNames.size() + " image filenames: " + imageFileNames);
 
         } catch (IOException e) {
@@ -477,39 +525,8 @@ public class MainActivity extends AppCompatActivity {
         return maxIndex;
     }
 
+    // Estimate camera pose
     private void pose_estimation(Mat image){
-        // Detect ArUco marker and draw markers/id
-//        detectAR(image);
-
-//        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
-//        List<Mat> corners = new ArrayList<>();
-//        Mat markerIds = new Mat();
-//        Imgproc.cvtColor(image, image, Imgproc.COLOR_RGBA2RGB);
-////        Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_GRAY2RGB); // Convert to grayscale
-//        Log.i(TAG, "in detectAR: Image Mat type: " + image.type() + " (" + CvType.typeToString(image.type()) + ")");
-//        Aruco.detectMarkers(image, dictionary, corners, markerIds); // Detect markers and store the corners and IDs
-//
-////        Imgproc.cvtColor(image, image, Imgproc.COLOR_GRAY2RGB); // Convert image to RGB color space
-//        // Draw detected markers on image
-//        if (!markerIds.empty()) {
-//            Scalar green = new Scalar(0, 255, 0);
-//            Scalar red = new Scalar(255, 0, 0);
-//            Aruco.drawDetectedMarkers(image, corners); //, markerIds, green);
-//            // Draw marker ID label
-//            if (corners.size() > 0) {
-//                Mat firstCorner = corners.get(0);
-//                double x = firstCorner.get(0, 0)[0];
-//                double y = firstCorner.get(0, 0)[1];
-//                org.opencv.core.Point labelPos = new org.opencv.core.Point(x, y - 30); // Offset
-//                int markerId = (int) markerIds.get(0, 0)[0];
-//                Imgproc.putText(image, "id=" + markerId, labelPos, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, red, 2);
-//            }
-//            Log.i(TAG, "Markers detected: " + markerIds.dump());
-//        } else {
-//            Log.i(TAG, "No markers detected.");
-//        }
-
-        // Estimate camera poses
         Log.e(TAG, "Estimating pose");
         if(!markerIds.empty()){
             Mat rvecs = new Mat();
@@ -534,9 +551,9 @@ public class MainActivity extends AppCompatActivity {
 //        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
 //        List<Mat> corners = new ArrayList<>();
 //        Mat markerIds = new Mat();
-        Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGBA2RGB);
+        Imgproc.cvtColor(image, image, Imgproc.COLOR_RGBA2RGB);
 //        Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_GRAY2RGB); // Convert to grayscale
-        Log.i(TAG, "in detectAR: Image Mat type: " + mainImage.type() + " (" + CvType.typeToString(mainImage.type()) + ")");
+        Log.i(TAG, "in detectAR: Image Mat type: " + image.type() + " (" + CvType.typeToString(image.type()) + ")");
         Aruco.detectMarkers(image, dictionary, corners, markerIds); // Detect markers and store the corners and IDs
 
         // Convert image to RGB color space
