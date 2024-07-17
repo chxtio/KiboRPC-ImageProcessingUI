@@ -70,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean templateMatchingStarted = false;
     private boolean undistortStarted = false;
     private boolean detectARStarted = false;
+    private boolean estimatePoseStarted = false;
     private RecyclerView recyclerView;
     private TemplateAdapter templateAdapter;
 
@@ -80,6 +81,9 @@ public class MainActivity extends AppCompatActivity {
 
     private Mat cameraMatrix;
     private Mat cameraCoefficients;
+    Dictionary dictionary;
+    List<Mat> corners = new ArrayList<>();
+    Mat markerIds;
 
 //    private YourService yourService;
 //    private KiboRpcApi api;
@@ -97,6 +101,11 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.d(TAG, "OpenCV initialization succeeded.");
         }
+
+        // Initialize ar detection variables
+        dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
+        markerIds = new Mat();
+
         // Initialize views
         recyclerView = findViewById(R.id.recyclerView);
         imageView = findViewById(R.id.imageView);
@@ -126,8 +135,12 @@ public class MainActivity extends AppCompatActivity {
                 buttonDetectAR.setText("Detect AR");
                 undistortStarted = true;
             } else if (!detectARStarted){
-                pose_estimation(mainImage);
+                detectAR(mainImage);
+                buttonDetectAR.setText("Estimate Pose");
                 detectARStarted = true;
+            } else if (!estimatePoseStarted) {
+                pose_estimation(mainImage);
+                estimatePoseStarted = true;
             }
               displayMainImage();
         });
@@ -153,17 +166,6 @@ public class MainActivity extends AppCompatActivity {
         imageView.setVisibility(View.VISIBLE);
         recyclerView.setVisibility(View.GONE);
         setTitle("NavCam");
-
-        // Todo move out of UI thread
-        // Call correctImageDistortion from YourService
-//        Mat undistortedImage = yourService.correctImageDistortion(mainImage);
-//        correctImageDistortion(mainImage);
-//        File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-//        File file = new File(directory, "undistorted_image.png");
-//        Imgcodecs.imwrite(file.getAbsolutePath(), undistortedImage);
-//        Imgcodecs.imwrite("undistorted_image.png", undistortedImage); // Save undistortedImage
-//        detectAR(mainImage);
-//        pose_estimation(mainImage);
     }
 
     private void showTemplates() {
@@ -182,8 +184,6 @@ public class MainActivity extends AppCompatActivity {
         templateMatchingTask.execute();
         templateMatchingStarted = true;
     }
-
-
 
     private class TemplateMatchingTask extends AsyncTask<Void, Integer, Integer> {
         @Override
@@ -478,41 +478,38 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void pose_estimation(Mat image){
-
-
-
         // Detect ArUco marker and draw markers/id
 //        detectAR(image);
 
-        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
-        List<Mat> corners = new ArrayList<>();
-        Mat markerIds = new Mat();
-        Imgproc.cvtColor(image, image, Imgproc.COLOR_RGBA2RGB);
-//        Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_GRAY2RGB); // Convert to grayscale
-        Log.i(TAG, "in detectAR: Image Mat type: " + image.type() + " (" + CvType.typeToString(image.type()) + ")");
-        Aruco.detectMarkers(image, dictionary, corners, markerIds); // Detect markers and store the corners and IDs
+//        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
+//        List<Mat> corners = new ArrayList<>();
+//        Mat markerIds = new Mat();
+//        Imgproc.cvtColor(image, image, Imgproc.COLOR_RGBA2RGB);
+////        Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_GRAY2RGB); // Convert to grayscale
+//        Log.i(TAG, "in detectAR: Image Mat type: " + image.type() + " (" + CvType.typeToString(image.type()) + ")");
+//        Aruco.detectMarkers(image, dictionary, corners, markerIds); // Detect markers and store the corners and IDs
+//
+////        Imgproc.cvtColor(image, image, Imgproc.COLOR_GRAY2RGB); // Convert image to RGB color space
+//        // Draw detected markers on image
+//        if (!markerIds.empty()) {
+//            Scalar green = new Scalar(0, 255, 0);
+//            Scalar red = new Scalar(255, 0, 0);
+//            Aruco.drawDetectedMarkers(image, corners); //, markerIds, green);
+//            // Draw marker ID label
+//            if (corners.size() > 0) {
+//                Mat firstCorner = corners.get(0);
+//                double x = firstCorner.get(0, 0)[0];
+//                double y = firstCorner.get(0, 0)[1];
+//                org.opencv.core.Point labelPos = new org.opencv.core.Point(x, y - 30); // Offset
+//                int markerId = (int) markerIds.get(0, 0)[0];
+//                Imgproc.putText(image, "id=" + markerId, labelPos, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, red, 2);
+//            }
+//            Log.i(TAG, "Markers detected: " + markerIds.dump());
+//        } else {
+//            Log.i(TAG, "No markers detected.");
+//        }
 
-//        Imgproc.cvtColor(image, image, Imgproc.COLOR_GRAY2RGB); // Convert image to RGB color space
-        // Draw detected markers on image
-        if (!markerIds.empty()) {
-            Scalar green = new Scalar(0, 255, 0);
-            Scalar red = new Scalar(255, 0, 0);
-            Aruco.drawDetectedMarkers(image, corners); //, markerIds, green);
-            // Draw marker ID label
-            if (corners.size() > 0) {
-                Mat firstCorner = corners.get(0);
-                double x = firstCorner.get(0, 0)[0];
-                double y = firstCorner.get(0, 0)[1];
-                org.opencv.core.Point labelPos = new org.opencv.core.Point(x, y - 30); // Offset
-                int markerId = (int) markerIds.get(0, 0)[0];
-                Imgproc.putText(image, "id=" + markerId, labelPos, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, red, 2);
-            }
-            Log.i(TAG, "Markers detected: " + markerIds.dump());
-        } else {
-            Log.i(TAG, "No markers detected.");
-        }
-
-        // Estimate pose of ArUco markers
+        // Estimate camera poses
         Log.e(TAG, "Estimating pose");
         if(!markerIds.empty()){
             Mat rvecs = new Mat();
@@ -529,17 +526,14 @@ public class MainActivity extends AppCompatActivity {
 //            undistortImg.copyTo(image);
             Log.e(TAG, "Estimating pose complete: check output");
             Toast.makeText(getApplicationContext(), "Pose estimation complete!", Toast.LENGTH_SHORT).show();
-
         }
-
-
     }
 
     // Detect AR and draw markers
     private void detectAR(Mat image) {
-        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
-        List<Mat> corners = new ArrayList<>();
-        Mat markerIds = new Mat();
+//        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250); // Load predefined ArUco dict of 250 unique 5x5 markers
+//        List<Mat> corners = new ArrayList<>();
+//        Mat markerIds = new Mat();
         Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_RGBA2RGB);
 //        Imgproc.cvtColor(mainImage, mainImage, Imgproc.COLOR_GRAY2RGB); // Convert to grayscale
         Log.i(TAG, "in detectAR: Image Mat type: " + mainImage.type() + " (" + CvType.typeToString(mainImage.type()) + ")");
@@ -567,6 +561,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.i(TAG, "No markers detected.");
         }
+        Toast.makeText(getApplicationContext(), "AR marker(s) detected", Toast.LENGTH_SHORT).show();
     }
 
     public void correctImageDistortion(Mat image) {
