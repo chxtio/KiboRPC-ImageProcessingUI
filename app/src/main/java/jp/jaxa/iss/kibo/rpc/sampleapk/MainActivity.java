@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
     private List<String> imageFileNames;
     private List<String> mainImageFileNames;
-    private String assetFileName = "images/image.png";
+    private String assetFileName = "images/image_cropped.png";
     private Mat mainImage;
     private Mat mainImageView;
     private List<Mat> templates = new ArrayList<>();
@@ -244,7 +244,7 @@ public class MainActivity extends AppCompatActivity {
                         Mat rotResizedTemp = rotImage(resizedTemp, j);
 
                         Imgproc.matchTemplate(targetImg, rotResizedTemp, result, Imgproc.TM_CCOEFF_NORMED);
-                        double threshold = 0.65;//0.75;
+                        double threshold = 0.45; //0.65;
                         Core.MinMaxLocResult mmlr = Core.minMaxLoc(result);
                         double maxVal = mmlr.maxVal;
 
@@ -370,7 +370,7 @@ public class MainActivity extends AppCompatActivity {
             imageFileNames = new ArrayList<>(Arrays.asList(assetFileNames));
             // Remove specific files
             imageFileNames.removeAll(Arrays.asList("android-logo-mask.png", "android-logo-shine.png", "clock64.png",
-                    "clock_font.png", "image.png", "image_view.png", "file_name.png"));
+                    "clock_font.png", "image.png", "image_view.png", "image_cropped.png", "file_name.png"));
             Log.e(TAG, "Loaded " + imageFileNames.size() + " image filenames: " + imageFileNames);
 
         } catch (IOException e) {
