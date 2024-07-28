@@ -6,6 +6,8 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <item name="windowActionBar">false</item> <!-- Disable default ActionBar -->
+        <item name="windowNoTitle">true</item> <!-- Remove window title -->
     </style>
     <style name="BlueButton" parent="Widget.AppCompat.Button">
         <item name="android:backgroundTint">@color/blue</item>

@@ -19,6 +19,8 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.widget.Toolbar;
+
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -79,6 +81,7 @@ public class MainActivity extends AppCompatActivity {
     private TemplateAdapter templateAdapter;
 
     private ImageView imageView;
+    private ImageView initialImageView;
     private Button buttonMatchTemplate;
     private Button buttonDisplayMainImage;
     private Button buttonDetectAR;
@@ -96,8 +99,21 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Set up the custom toolbar
+        Toolbar toolbar = findViewById(R.id.custom_toolbar);
+        setSupportActionBar(toolbar);
+
+        // Remove default title text
+        getSupportActionBar().setDisplayShowTitleEnabled(false);
+
+        // Set the title for the custom toolbar
+        TextView toolbarTitle = findViewById(R.id.toolbar_title);
+        toolbarTitle.setText("KiboRPC Image Processing UI");
+//        setTitle("KiboRPC Image Processing UI");
 //        yourService = new YourService(); // Instantiate YourService
-//        KiboRpcApi api = KiboRpcApi.getInstance(); // Obtain the KiboRpcApi instance as required
+
+        initialImageView = findViewById(R.id.initialImageView);
 
 
         if (!OpenCVLoader.initDebug()) {
@@ -116,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
         buttonMatchTemplate= findViewById(R.id.buttonMatchTemplate);
         buttonDisplayMainImage = findViewById(R.id.buttonDisplayMainImage);
         buttonDetectAR = findViewById(R.id.buttonDetectAR);
+        initialImageView.setImageResource(R.drawable.astrobee2);
 
         // Load templates and image filenames
         loadImages();
@@ -131,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
         templateAdapter = new TemplateAdapter(templates, imageFileNames);
         recyclerView.setAdapter(templateAdapter);
 
-        displayMainImage(mainImageView); // NavCam sample image
+//        displayMainImage(mainImageView); // NavCam sample image
 
         // Button click listener for viewing pose estimation
         buttonDetectAR.setOnClickListener(v -> {
@@ -169,6 +186,7 @@ public class MainActivity extends AppCompatActivity {
         Utils.matToBitmap(image, bitmap);
         imageView.setImageBitmap(bitmap);
         imageView.setVisibility(View.VISIBLE);
+        initialImageView.setVisibility(View.VISIBLE);
         recyclerView.setVisibility(View.GONE);
         setTitle("NavCam");
     }
@@ -176,6 +194,7 @@ public class MainActivity extends AppCompatActivity {
     private void showTemplates() {
         imageView.setVisibility(View.GONE);
         recyclerView.setVisibility(View.VISIBLE);
+        initialImageView.setVisibility(View.GONE);
         if (bestMatchIndex != -1) {
             setTitle("Best Match: " + imageFileNames.get(bestMatchIndex).replace(".png", ""));
         } else {
@@ -225,7 +244,7 @@ public class MainActivity extends AppCompatActivity {
                         Mat rotResizedTemp = rotImage(resizedTemp, j);
 
                         Imgproc.matchTemplate(targetImg, rotResizedTemp, result, Imgproc.TM_CCOEFF_NORMED);
-                        double threshold = 0.69;//0.66;//0.75;
+                        double threshold = 0.65;//0.75;
                         Core.MinMaxLocResult mmlr = Core.minMaxLoc(result);
                         double maxVal = mmlr.maxVal;
 
@@ -272,10 +291,8 @@ public class MainActivity extends AppCompatActivity {
             // Update UI with best match information
             String bestMatchFilename = imageFileNames.get(bestMatchIndex);
             String bestMatch = bestMatchFilename.substring(0, bestMatchFilename.length() - 4);
-
             // Set bestMatchIndex and update UI
             templateAdapter.setBestMatchIndex(bestMatchIndex);
-
             // Set title on the main thread
             runOnUiThread(() -> {
                 if (recyclerView.getVisibility() == View.VISIBLE) {

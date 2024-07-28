@@ -4,6 +4,24 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <!-- Custom Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/custom_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:theme="@style/ThemeOverlay.AppCompat.ActionBar">
+
+        <TextView
+            android:id="@+id/toolbar_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Your Centered Title"
+            android:textColor="@android:color/white"
+            android:textSize="20sp" />
+    </androidx.appcompat.widget.Toolbar>
+
     <!-- View Main Image Button -->
     <Button
         android:id="@+id/buttonDisplayMainImage"
@@ -41,18 +59,29 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp" />
 
-    <!--ImageViewfordisplayingthemainimage-->
+    <ImageView
+        android:id="@+id/initialImageView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:src="@drawable/astrobee2"
+        android:scaleType="centerCrop"
+        android:cropToPadding="true"
+        android:contentDescription="Initial Image"
+        />
+
+    <!-- ImageView for displaying the main image -->
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginTop="50dp"
         android:layout_above="@id/buttonDisplayMainImage"
         android:layout_marginBottom="16dp"
         android:adjustViewBounds="true"
         android:scaleType="centerCrop"
         android:cropToPadding="true"
-        android:visibility="gone"/>
-
+        android:visibility="gone" />
 
     <!-- RecyclerView for displaying template images -->
     <androidx.recyclerview.widget.RecyclerView
@@ -60,7 +89,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_above="@id/imageView"
+        android:layout_marginTop="50dp"
         android:layout_marginBottom="16dp"
-        android:visibility="visible" />
+        android:visibility="gone" />
 
 </RelativeLayout>
