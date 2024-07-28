@@ -186,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
         Utils.matToBitmap(image, bitmap);
         imageView.setImageBitmap(bitmap);
         imageView.setVisibility(View.VISIBLE);
-        initialImageView.setVisibility(View.VISIBLE);
+        initialImageView.setVisibility(View.GONE);
         recyclerView.setVisibility(View.GONE);
         setTitle("NavCam");
     }
@@ -612,10 +612,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadCameraParameters() {
         Log.e(TAG, "Getting calibration parameters");
+        // From service
         double[][] cameraMatrixValues = {
-                {1000.0, 0.0, 320.0}, // Hardcoded values
-                {0.0, 1000.0, 240.0},
-                {0.0, 0.0, 1.0}
+                {523.1057499999999, 0.0, 635.434258}, // fx, 0, cx
+                {0.0, 534.765913, 500.335102},         // 0, fy, cy
+                {0.0, 0.0, 1.0}                        // 0, 0, 1
         };
 
         cameraMatrix = new Mat(3, 3, CvType.CV_64F);
@@ -623,8 +624,11 @@ public class MainActivity extends AppCompatActivity {
             cameraMatrix.put(i, 0, cameraMatrixValues[i]);
         }
 
-        double[] cameraCoefficientsValues = {0.1, -0.2, 0.0, 0.0, 0.1}; // Hardcoded values
+        double[] cameraCoefficientsValues = {-0.164787, 0.020375, -0.001572, -0.000369, 0.0}; // k1, k2, p1, p2, k3
         cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
         cameraCoefficients.put(0, 0, cameraCoefficientsValues);
+
+        Log.i(TAG, "Camera matrix: " + cameraMatrix.dump());
+        Log.i(TAG, "Camera coefficients: " + cameraCoefficients.dump());
     }
 }
